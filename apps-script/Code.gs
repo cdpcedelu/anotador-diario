@@ -1,6 +1,6 @@
 /**
  * Anotador diario — Backend (Google Apps Script vinculado a la planilla)
- * Versión 1.0 — 2026-09-30 12:00 ARG
+ * Versión 1.1 — 2026-09-30 09:10 ARG
  * Autor: Germán Rodríguez
  *
  * Instalación (una sola vez):
@@ -226,7 +226,7 @@ function cleanTask_(p) {
   return {
     id: String(p.id).slice(0, 40),
     hojaId: String(p.hojaId || '').slice(0, 40),
-    texto: String(p.texto || '').slice(0, 2000),
+    texto: String(p.texto || '').slice(0, 4000),
     hecha: !!p.hecha,
     fecha: fecha,
     persona: String(p.persona || '').slice(0, 40),
@@ -341,6 +341,8 @@ function esc_(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function escBr_(s) { return esc_(s).replace(/\n/g, '<br>'); }
+
 function isEmail_(s) { return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(s).trim()); }
 
 function ordenar_(a, b) {
@@ -361,7 +363,7 @@ function reportData_(tareas, hoy, incluirHechas) {
 
 function pdfHtml_(hoja, r, hoy) {
   const fila = (t, cls) => '<tr class="' + cls + '"><td>' +
-    (t.prioridad ? '<b>' + esc_(t.texto) + '</b> <span class="prio">Prioridad</span>' : esc_(t.texto)) +
+    (t.prioridad ? '<b>' + escBr_(t.texto) + '</b> <span class="prio">Prioridad</span>' : escBr_(t.texto)) +
     (t.nota ? '<div class="nota">' + esc_(t.nota).replace(/\n/g, '<br>') + '</div>' : '') +
     '</td><td class="c">' + (cls === 'hoy' ? '<span class="pill">HOY</span>' : esc_(cuando_(t, hoy))) +
     '</td><td class="c">' + esc_(t.persona) + '</td></tr>';
@@ -400,7 +402,7 @@ function pdfHtml_(hoja, r, hoy) {
   });
   if (r.hechasHoy.length) {
     html += '<h2>Terminadas hoy (' + r.hechasHoy.length + ')</h2><table class="t"><tr><th>Tarea</th><th style="width:22%">Terminada</th><th style="width:18%">Hablar con</th></tr>' +
-      r.hechasHoy.map(t => '<tr class="done"><td>' + esc_(t.texto) + (t.nota ? '<div class="nota">' + esc_(t.nota) + '</div>' : '') +
+      r.hechasHoy.map(t => '<tr class="done"><td>' + escBr_(t.texto) + (t.nota ? '<div class="nota">' + escBr_(t.nota) + '</div>' : '') +
         '</td><td class="c">' + esc_(String(t.completada).slice(11, 16)) + ' h</td><td class="c">' + esc_(t.persona) + '</td></tr>').join('') + '</table>';
   }
   html += '<p class="foot">Anotador diario — generado el ' + Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy HH:mm') + ' h</p></body></html>';
@@ -426,7 +428,7 @@ function emailHtml_(resumen, hoy, comentario) {
   if (paraHoy.length) {
     h += '<h3 style="font-size:14px;margin:24px 0 8px">Pendiente para hoy</h3><table style="border-collapse:collapse;width:100%">' +
       paraHoy.map(x => '<tr><td style="' + td + ';background:' + (x.venc ? '#FBF0EE' : '#EEF4FA') + '">' +
-        (x.t.prioridad ? '<b>' + esc_(x.t.texto) + '</b>' : esc_(x.t.texto)) +
+        (x.t.prioridad ? '<b>' + escBr_(x.t.texto) + '</b>' : escBr_(x.t.texto)) +
         (x.t.persona ? ' <span style="color:#56626D">— hablar con ' + esc_(x.t.persona) + '</span>' : '') +
         (x.venc ? ' <span style="color:#983A33;font-size:11px;font-weight:bold">VENCIDA</span>' : '') +
         '</td><td style="' + td + ';color:#8B959E;width:120px;background:' + (x.venc ? '#FBF0EE' : '#EEF4FA') + '">' + esc_(x.hoja.nombre) + '</td></tr>').join('') + '</table>';
