@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.4 — 2026-09-30 10:15 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.5 — 2026-09-30 10:25 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -58,6 +58,8 @@ button{cursor:pointer}
 .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--onink)}
 .btn.primary:hover{background:var(--inkHover);border-color:var(--inkHover)}
 .btn.danger{color:var(--venc)}
+.btn.send.busy i{width:8px;height:8px;border-radius:50%;background:var(--gold);display:inline-block;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
 .btn[disabled]{opacity:.55;cursor:default}
 .ib{border:0;background:none;width:32px;height:32px;border-radius:7px;display:inline-grid;place-items:center;color:var(--ink3);padding:0}
 .ib:hover{background:var(--soft);color:var(--ink)}
@@ -960,16 +962,29 @@ $('#formSend').onsubmit = async e => {
   const cc = [...checkedCc()];
   if (!hojaIds.length) { $('#sendErr').textContent = 'Elegí al menos una hoja.'; return; }
   if (!apiUrl() || !apiKey()) { $('#sendErr').textContent = 'Falta configurar la conexión en Ajustes.'; return; }
-  const btn = $('#sendGo'); btn.disabled = true; btn.textContent = 'Enviando…'; $('#sendErr').textContent = '';
+  $('#sendErr').textContent = '';
+  $('#dlgSend').close();
+  sendInBackground({ hojaIds, to, cc, incluirHechas: $('#incDone').checked, comentario: $('#sendMsg').value.trim() });
+};
+let sending = 0;
+function setSendBtn() {
+  const b = $('#btnSend'); b.classList.toggle('busy', sending > 0);
+  b.querySelector('span').textContent = sending > 0 ? 'Enviando…' : 'Enviar resumen';
+  let dot = b.querySelector('i'); if (sending > 0 && !dot) { dot = document.createElement('i'); b.appendChild(dot); } if (!sending && dot) dot.remove();
+}
+async function sendInBackground(p) {
+  const dest = p.to + (p.cc.length ? ` (+${p.cc.length} en copia)` : '');
+  sending++; setSendBtn();
+  toast('Enviando resumen a ' + dest + '. Podés seguir usando el anotador.', null, '', 3500);
   try {
     await drain();
-    await api('sendReport', { hojaIds, to, cc, incluirHechas: $('#incDone').checked, comentario: $('#sendMsg').value.trim() }, 180000);
-    $('#dlgSend').close();
-    toast(`Resumen enviado a ${to}${cc.length ? ` (+${cc.length} en copia)` : ''}`);
+    await api('sendReport', p, 180000);
+    toast('Resumen enviado a ' + dest, null, '', 5000);
   } catch (err) {
-    $('#sendErr').textContent = err.timeout ? 'El servidor tardó demasiado en responder. Revisá tu casilla: el mail puede haber salido igual.' : err.message; btn.disabled = false; btn.textContent = 'Enviar';
-  }
-};
+    const msg = err.timeout ? 'El servidor tardó en responder. Revisá tu casilla: el mail puede haber salido igual.' : 'No se pudo enviar el resumen: ' + err.message;
+    toast(msg, () => sendInBackground(p), 'Reintentar', 15000);
+  } finally { sending--; setSendBtn(); }
+}
 
 /* ====== Ajustes ====== */
 function openSettings(msg) {
@@ -1010,12 +1025,12 @@ function confirmDlg(title, text, ok = 'Confirmar') {
   return new Promise(res => d.addEventListener('close', () => res(d.returnValue === 'si'), { once: true }));
 }
 let toastT;
-function toast(msg, undo) {
+function toast(msg, undo, label, ms) {
   const el = $('#toast');
-  el.innerHTML = `<span>${esc(msg)}</span>` + (undo ? '<button type="button">Deshacer</button>' : '');
-  if (undo) el.querySelector('button').onclick = () => { undo(); el.classList.remove('show'); };
+  el.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button type="button">${esc(label || 'Deshacer')}</button>` : '');
+  if (undo) el.querySelector('button').onclick = () => { el.classList.remove('show'); undo(); };
   el.classList.add('show'); clearTimeout(toastT);
-  toastT = setTimeout(() => el.classList.remove('show'), undo ? 6000 : 3200);
+  toastT = setTimeout(() => el.classList.remove('show'), ms || (undo ? 6000 : 3200));
 }
 
 /* ====== Apariencia ====== */
@@ -1035,6 +1050,7 @@ $('#uiTema').onclick = e => { const b = e.target.closest('button'); if (!b) retu
 applyUI();
 
 /* ====== Inicio ====== */
+window.addEventListener('beforeunload', e => { if (sending > 0 || Q.length) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('online', pump);
 window.addEventListener('offline', () => setSync('offline'));
 window.addEventListener('focus', () => { if (!Q.length && !S.E && !document.querySelector('dialog[open]') && Date.now() - lastLoad > 60000) load(); else renderTop(); });
