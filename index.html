@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 2.0 — 2026-09-30 11:50 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 2.1 — 2026-09-30 12:05 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -699,7 +699,10 @@ function renderTools() {
   $('#fPersona').innerHTML = `<option value="">Todas las personas</option>` + all.map(p => `<option ${S.persona === p ? 'selected' : ''}>${esc(p)}</option>`).join('');
 }
 function tagHTML(t) {
-  if (t.hecha) return `<span class="tag">Terminada ${String(t.completada).slice(0, 10) === hoyStr() ? String(t.completada).slice(11, 16) + ' h' : fmtShort(String(t.completada).slice(0, 10))}</span>`;
+  if (t.hecha) {
+    const c = String(t.completada || ''), f = c.slice(0, 10), hm = c.slice(11, 16);
+    return f ? `<span class="tag">Terminada ${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}${hm ? ', ' + hm + ' h' : ''}</span>` : '<span class="tag">Terminada</span>';
+  }
   const b = bucket(t.fecha);
   if (b === 'sin') return '';
   if (b === 'hoy') return '<span class="tag hoy">HOY</span>';
