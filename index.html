@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.8 — 2026-09-30 11:25 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.9 — 2026-09-30 11:35 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -1100,7 +1100,7 @@ async function iaRevisar() {
     const d = await iaApi('pendientes', { dias: IA.dias });
     const desc = iaLocalDesc();
     d.items = (d.items || []).filter(it => !desc[it.id]);
-    const hoja = S.hoja !== '__hoy' && hojaById(S.hoja) ? S.hoja : S.hojas[0].id;
+    const hoja = iaHojaCorreo(false)?.id || '__correo';
     IA.items = (d.items || []).map(it => Object.assign({ sel: it.urgencia !== 'baja', hojaId: hoja, cuando: it.urgencia === 'baja' ? 'prox' : 'hoy', persona: it.contacto || '' }, it));
     IA.info = IA.items.length ? `${IA.items.length} correo${IA.items.length > 1 ? 's' : ''} para revisar, de ${d.revisados} sin respuesta tuya.` : `Revisé ${d.revisados} correo${d.revisados !== 1 ? 's' : ''} sin respuesta tuya y no encontré nada pendiente.`;
     if (!$('#dlgIA').open) toast('Correo IA: ' + IA.info, () => openIA(), 'Ver', 12000);
@@ -1114,7 +1114,7 @@ function renderIA() {
   $('#iaDias').value = String(IA.dias);
   $('#iaGo').disabled = IA.loading || !iaUrl() || !iaKey();
   $('#iaGo').textContent = IA.loading ? 'Revisando…' : (IA.items.length ? 'Volver a revisar' : 'Revisar correo');
-  const hojasOpt = sel => S.hojas.map(h => `<option value="${esc(h.id)}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)}</option>`).join('') + '<option value="__new">+ Nueva hoja…</option>';
+  const hojasOpt = sel => (iaHojaCorreo(false) ? '' : `<option value="__correo" ${sel === '__correo' ? 'selected' : ''}>Pendientes del correo (nueva)</option>`) + S.hojas.map(h => `<option value="${esc(h.id)}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)}</option>`).join('') + '<option value="__new">+ Nueva hoja…</option>';
   const cuandoOpt = v => [['hoy', 'Hoy'], ['man', 'Mañana'], ['prox', 'Semana entrante'], ['sin', 'Sin fecha']].map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
   let h = '';
   if (!iaUrl() || !iaKey()) h = '<div class="empty"><b>Falta conectar el correo.</b>Cargá la URL y la clave del script de correo en Ajustes, sección Correo con IA.</div>';
@@ -1139,6 +1139,15 @@ function renderIA() {
   body.innerHTML = h;
   const n = IA.items.filter(i => i.sel && i.titulo.trim()).length;
   $('#iaAdd').disabled = !n; $('#iaAdd').textContent = n ? `Agregar ${n} tarea${n > 1 ? 's' : ''}` : 'Agregar';
+}
+const IA_HOJA = 'Pendientes del correo';
+function iaHojaCorreo(crear) {
+  let h = S.hojas.find(x => x.nombre.trim().toLowerCase() === IA_HOJA.toLowerCase());
+  if (!h && crear) {
+    h = { id: uid('h'), nombre: IA_HOJA, color: '#8A6D3B', orden: Math.max(0, ...S.hojas.map(x => x.orden)) + 1 };
+    S.hojas.push(h); enqueue('upsertHoja', h);
+  }
+  return h;
 }
 function iaNueva(target) { IA.newOpen = true; IA.newTarget = target; renderIA(); setTimeout(() => $('#iaNewName')?.focus(), 0); }
 function iaCrearHoja() {
@@ -1179,7 +1188,7 @@ function iaSyncDesc() {
 function iaAgregar() {
   const sel = IA.items.filter(i => i.sel && i.titulo.trim()); if (!sel.length) return;
   sel.forEach(it => {
-    const t = { id: uid('t'), hojaId: hojaById(it.hojaId) ? it.hojaId : S.hojas[0].id, texto: it.titulo.trim(), hecha: false, fecha: iaFecha(it.cuando), persona: (it.persona || '').trim().replace(/,/g, ' ').slice(0, 30), nota: (it.resumen ? it.resumen + '\n' : '') + it.link, prioridad: it.urgencia === 'alta', creada: nowIso(), completada: '' };
+    const t = { id: uid('t'), hojaId: it.hojaId === '__correo' ? iaHojaCorreo(true).id : (hojaById(it.hojaId) ? it.hojaId : S.hojas[0].id), texto: it.titulo.trim(), hecha: false, fecha: iaFecha(it.cuando), persona: (it.persona || '').trim().replace(/,/g, ' ').slice(0, 30), nota: (it.resumen ? it.resumen + '\n' : '') + it.link, prioridad: it.urgencia === 'alta', creada: nowIso(), completada: '' };
     S.tareas.push(t); enqueue('upsertTask', t);
   });
   iaDescartar(sel.map(i => i.id));
