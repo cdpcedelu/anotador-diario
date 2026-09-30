@@ -1,6 +1,6 @@
 /**
  * Anotador diario — Backend (Google Apps Script vinculado a la planilla)
- * Versión 1.1 — 2026-09-30 09:10 ARG
+ * Versión 1.3 — 2026-09-30 10:00 ARG
  * Autor: Germán Rodríguez
  *
  * Instalación (una sola vez):
@@ -87,7 +87,7 @@ function getOrCreateKey_() {
 /* ================= API web ================= */
 
 function doGet() {
-  return json_({ ok: true, app: 'Anotador diario', version: '1.0' });
+  return json_({ ok: true, app: 'Anotador diario', version: '1.3' });
 }
 
 function doPost(e) {
@@ -115,7 +115,11 @@ function doPost(e) {
 }
 
 const ACTIONS = {
-  bootstrap: () => ({ hojas: getHojas_(), tareas: getTareas_(), config: getConfig_(), hoy: today_() }),
+  bootstrap: () => ({ hojas: getHojas_(), tareas: getTareas_(), config: getConfig_(), hoy: today_(), batch: true, version: '1.3' }),
+  batch: p => (p.ops || []).slice(0, 50).map(op => {
+    if (['batch', 'bootstrap', 'sendReport'].indexOf(op.action) >= 0 || !ACTIONS[op.action]) throw new Error('Acción no permitida en lote: ' + op.action);
+    return ACTIONS[op.action](op.payload || {});
+  }),
   upsertTask: p => { const t = cleanTask_(p); upsertMany_(SH.T, COLS_T, [t]); return t; },
   upsertTasks: p => { const ts = (p.tareas || []).map(cleanTask_); upsertMany_(SH.T, COLS_T, ts); return ts.length; },
   deleteTask: p => { deleteMany_(SH.T, [p.id]); return true; },
@@ -341,7 +345,26 @@ function esc_(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function escBr_(s) { return esc_(s).replace(/\n/g, '<br>'); }
+function inlineMd_(s) { return esc_(s).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>'); }
+
+/** Texto con formato simple: **negrita**, líneas "• " o "- " (viñetas) y "1. " (numeración). */
+function escBr_(s) {
+  const lines = String(s == null ? '' : s).split('\n');
+  let html = '', list = null, buf = [];
+  const flush = () => { if (buf.length) { html += buf.join('<br>'); buf = []; } };
+  const close = () => { if (list) { html += '</' + list + '>'; list = null; } };
+  lines.forEach(ln => {
+    const ul = ln.match(/^\s*[-•]\s+(.*)$/), ol = ln.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (ul || ol) {
+      flush();
+      const tg = ul ? 'ul' : 'ol';
+      if (list !== tg) { close(); html += '<' + tg + (ol && ol[1] !== '1' ? ' start="' + ol[1] + '"' : '') + ' style="margin:2px 0;padding-left:18px">'; list = tg; }
+      html += '<li>' + inlineMd_(ul ? ul[1] : ol[2]) + '</li>';
+    } else { close(); buf.push(inlineMd_(ln)); }
+  });
+  flush(); close();
+  return html;
+}
 
 function isEmail_(s) { return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(s).trim()); }
 
