@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.9 — 2026-09-30 11:35 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 2.0 — 2026-09-30 11:50 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -104,6 +104,12 @@ aside{background:var(--side);border-right:1px solid var(--line);padding:20px 12p
 .cnt.h{background:var(--hoyFill);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
 .side-sep{height:1px;background:var(--line);margin:10px 10px}
 .add-sheet{color:var(--ink3);font-weight:600}
+.sheet-item[draggable=true]{cursor:grab}
+.sheet-item.dragging{opacity:.4}
+.sheet-item.drop-before-y{box-shadow:inset 0 3px 0 var(--hoyFill)}
+.sheet-item.drop-after-y{box-shadow:inset 0 -3px 0 var(--hoyFill)}
+.sheet-item.drop-before-x{box-shadow:inset 3px 0 0 var(--hoyFill)}
+.sheet-item.drop-after-x{box-shadow:inset -3px 0 0 var(--hoyFill)}
 .side-foot{margin:22px 10px 0;font-size:12.5px;color:var(--ink3);line-height:1.6}
 .side-foot b{color:var(--ink2)}
 
@@ -368,6 +374,7 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
     <p class="hint">Usá una hoja por tema: AMELIFE, CDP, casa, un proyecto.</p>
     <div class="fld"><label for="sheetName">Nombre</label><input type="text" id="sheetName" maxlength="60" required></div>
     <div class="fld"><span class="fl">Color</span><div class="swatches" id="swatches"></div></div>
+    <div class="fld" id="sheetMoveFld"><span class="fl">Posición</span><div class="seg" id="sheetMove"><button type="button" data-mv="-1">Mover antes</button><button type="button" data-mv="1">Mover después</button></div></div>
     <div class="err" id="sheetErr"></div>
     <div class="dlg-actions"><button type="button" class="btn danger" id="sheetDel">Eliminar hoja</button><span class="spacer"></span><button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Guardar</button></div>
   </form>
@@ -641,7 +648,7 @@ function renderSide() {
   S.hojas.slice().sort((a, b) => a.orden - b.orden).forEach(s => {
     const p = pend.filter(t => t.hojaId === s.id);
     const nh = p.filter(t => ['hoy', 'venc'].includes(bucket(t.fecha))).length;
-    html += `<button class="sheet-item ${S.hoja === s.id ? 'active' : ''}" data-sheet="${esc(s.id)}" style="--c:${esc(s.color)}"><span class="bar"></span><span class="nm">${esc(s.nombre)}</span>${nh ? `<span class="cnt h" title="Para hoy">${nh}</span>` : ''}${p.length ? `<span class="cnt" title="Pendientes">${p.length}</span>` : ''}</button>`;
+    html += `<button class="sheet-item ${S.hoja === s.id ? 'active' : ''}" data-sheet="${esc(s.id)}" draggable="true" title="Arrastrá para reordenar" style="--c:${esc(s.color)}"><span class="bar"></span><span class="nm">${esc(s.nombre)}</span>${nh ? `<span class="cnt h" title="Para hoy">${nh}</span>` : ''}${p.length ? `<span class="cnt" title="Pendientes">${p.length}</span>` : ''}</button>`;
   });
   html += `<button class="sheet-item add-sheet" id="btnNewSheet"><span style="display:grid;width:4px;place-items:center">+</span><span class="nm">Nueva hoja</span></button>`;
   $('#sheets').innerHTML = html;
@@ -934,6 +941,53 @@ $('#btnIA').onclick = openIA;
 $('#btnSet').onclick = () => openSettings();
 
 /* ====== Hojas ====== */
+function sortedHojas() { return S.hojas.slice().sort((a, b) => a.orden - b.orden); }
+function saveOrder(list) {
+  list.forEach((x, i) => { if (x.orden !== i + 1) { x.orden = i + 1; enqueue('upsertHoja', x); } });
+  renderSide();
+}
+function moveSheet(id, targetId, after) {
+  if (id === targetId) return;
+  const list = sortedHojas();
+  const from = list.findIndex(h => h.id === id); if (from < 0) return;
+  const [h] = list.splice(from, 1);
+  let to = list.findIndex(x => x.id === targetId); if (to < 0) return;
+  if (after) to++;
+  list.splice(to, 0, h);
+  saveOrder(list);
+}
+let dragSheet = null;
+const sheetsHorizontal = () => getComputedStyle($('#sheets')).flexDirection === 'row';
+function clearDrop() { document.querySelectorAll('.sheet-item').forEach(b => b.classList.remove('drop-before-x', 'drop-after-x', 'drop-before-y', 'drop-after-y', 'dragging')); }
+$('#sheets').addEventListener('dragstart', e => {
+  const it = e.target.closest('.sheet-item[draggable=true]'); if (!it) return;
+  dragSheet = it.dataset.sheet; it.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragSheet);
+});
+$('#sheets').addEventListener('dragover', e => {
+  if (!dragSheet) return;
+  const it = e.target.closest('.sheet-item[draggable=true]'); if (!it) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  const r = it.getBoundingClientRect(), hz = sheetsHorizontal();
+  const after = hz ? e.clientX > r.left + r.width / 2 : e.clientY > r.top + r.height / 2;
+  document.querySelectorAll('.sheet-item').forEach(b => { if (b !== it) b.classList.remove('drop-before-x', 'drop-after-x', 'drop-before-y', 'drop-after-y'); });
+  const ax = hz ? 'x' : 'y';
+  it.classList.toggle('drop-before-' + ax, !after); it.classList.toggle('drop-after-' + ax, after);
+});
+$('#sheets').addEventListener('drop', e => {
+  if (!dragSheet) return;
+  const it = e.target.closest('.sheet-item[draggable=true]');
+  if (it) { e.preventDefault(); const after = it.classList.contains('drop-after-x') || it.classList.contains('drop-after-y'); moveSheet(dragSheet, it.dataset.sheet, after); }
+  dragSheet = null; clearDrop();
+});
+$('#sheets').addEventListener('dragend', () => { dragSheet = null; clearDrop(); });
+$('#sheetMove').onclick = e => {
+  const b = e.target.closest('button'); if (!b || !sheetEdit) return;
+  const list = sortedHojas(); const i = list.indexOf(sheetEdit), j = i + Number(b.dataset.mv);
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]]; saveOrder(list);
+  toast(`"${sheetEdit.nombre}" quedó en el lugar ${j + 1}`);
+};
 let sheetEdit = null, sheetColor = PALETTE[0];
 function openSheetDlg(h) {
   sheetEdit = h;
@@ -941,6 +995,7 @@ function openSheetDlg(h) {
   $('#sheetDlgTitle').textContent = h ? 'Editar hoja' : 'Nueva hoja';
   $('#sheetName').value = h ? h.nombre : '';
   $('#sheetDel').hidden = !h;
+  $('#sheetMoveFld').hidden = !h;
   $('#sheetErr').textContent = '';
   renderSwatches();
   $('#dlgSheet').showModal(); $('#sheetName').focus();
