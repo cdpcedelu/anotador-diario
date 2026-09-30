@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.7 — 2026-09-30 11:10 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.8 — 2026-09-30 11:25 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -1096,7 +1096,10 @@ async function iaRevisar() {
   if (!iaUrl() || !iaKey()) { IA.error = ''; renderIA(); return; }
   IA.loading = true; IA.error = ''; IA.info = ''; setIABtn(); renderIA();
   try {
+    await iaSyncDesc();
     const d = await iaApi('pendientes', { dias: IA.dias });
+    const desc = iaLocalDesc();
+    d.items = (d.items || []).filter(it => !desc[it.id]);
     const hoja = S.hoja !== '__hoy' && hojaById(S.hoja) ? S.hoja : S.hojas[0].id;
     IA.items = (d.items || []).map(it => Object.assign({ sel: it.urgencia !== 'baja', hojaId: hoja, cuando: it.urgencia === 'baja' ? 'prox' : 'hoy', persona: it.contacto || '' }, it));
     IA.info = IA.items.length ? `${IA.items.length} correo${IA.items.length > 1 ? 's' : ''} para revisar, de ${d.revisados} sin respuesta tuya.` : `Revisé ${d.revisados} correo${d.revisados !== 1 ? 's' : ''} sin respuesta tuya y no encontré nada pendiente.`;
@@ -1151,7 +1154,28 @@ $('#iaBody').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); iaCrearHoja(); }
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); IA.newOpen = false; IA.newTarget = null; renderIA(); }
 });
-function iaDescartar(ids) { if (ids.length) iaApi('descartar', { ids }, 60000).catch(() => {}); }
+function iaLocalDesc() {
+  const d = LS.get('iadesc', {}), lim = Date.now() - 60 * 864e5;
+  Object.keys(d).forEach(k => { if (d[k] < lim) delete d[k]; });
+  return d;
+}
+function iaDescartar(ids) {
+  if (!ids.length) return;
+  const d = iaLocalDesc(); ids.forEach(id => { d[id] = Date.now(); }); LS.set('iadesc', d);
+  const pend = new Set(LS.get('iadescpend', [])); ids.forEach(id => pend.add(id)); LS.set('iadescpend', [...pend]);
+  iaSyncDesc();
+}
+let iaSyncing = null;
+function iaSyncDesc() {
+  if (iaSyncing) return iaSyncing;
+  const pend = LS.get('iadescpend', []);
+  if (!pend.length || !iaUrl() || !iaKey()) return Promise.resolve();
+  iaSyncing = iaApi('descartar', { ids: pend }, 60000)
+    .then(() => LS.set('iadescpend', LS.get('iadescpend', []).filter(id => !pend.includes(id))))
+    .catch(() => {})
+    .finally(() => { iaSyncing = null; });
+  return iaSyncing;
+}
 function iaAgregar() {
   const sel = IA.items.filter(i => i.sel && i.titulo.trim()); if (!sel.length) return;
   sel.forEach(it => {
