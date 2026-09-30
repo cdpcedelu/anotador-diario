@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.5 — 2026-09-30 10:25 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.6 — 2026-09-30 10:45 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -58,6 +58,30 @@ button{cursor:pointer}
 .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--onink)}
 .btn.primary:hover{background:var(--inkHover);border-color:var(--inkHover)}
 .btn.danger{color:var(--venc)}
+.btn.ia svg{color:var(--gold)}
+.btn.ia.busy i{width:8px;height:8px;border-radius:50%;background:var(--gold);display:inline-block;animation:pulse 1s ease-in-out infinite}
+dialog.wide{width:min(900px,calc(100vw - 24px))}
+.ia-head{display:flex;align-items:center;gap:8px}
+.ia-ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:14px;color:var(--ink2)}
+.ia-ctrl select,.ia-all select,.ia-opts select,.ia-opts input{border:1px solid var(--line);border-radius:7px;padding:4px 8px;font-size:13px;background:var(--surface)}
+#iaBody{max-height:min(58vh,640px);overflow:auto;margin:0 -6px;padding:0 6px 4px}
+#iaBody .empty{margin-top:14px}
+.ia-all{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--ink2);margin:8px 0}
+.ia-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:8px;opacity:.62}
+.ia-item.on{opacity:1;border-color:var(--focusLine)}
+.ia-sel{width:18px;height:18px;margin-top:8px;accent-color:var(--ink);flex:none}
+.ia-main{flex:1;min-width:0}
+.ia-top{display:flex;gap:8px;align-items:center}
+.ia-title{flex:1;min-width:0;border:1px solid transparent;border-radius:7px;padding:5px 8px;font-weight:700;font-size:15px;background:none}
+.ia-title:hover{border-color:var(--line)}
+.ia-title:focus{border-color:var(--focusLine);background:var(--surface);outline:0}
+.ia-meta{font-size:12.5px;color:var(--ink3);margin:2px 8px 0;overflow-wrap:anywhere}
+.ia-meta a,.txt a,.note a{color:var(--hoy);font-weight:600}
+.ia-res{font-size:13.5px;color:var(--ink2);margin:6px 8px 0;white-space:pre-wrap}
+.ia-opts{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:10px 8px 0;font-size:12.5px;color:var(--ink3)}
+.ia-opts label{display:inline-flex;gap:6px;align-items:center}
+.ia-opts input{width:130px}
+.ia-opts .gact{margin-left:auto}
 .btn.send.busy i{width:8px;height:8px;border-radius:50%;background:var(--gold);display:inline-block;animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
 .btn[disabled]{opacity:.55;cursor:default}
@@ -224,7 +248,7 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
   .top{padding:10px 14px;gap:8px}
   .today{display:none}
   .sync span{display:none}
-  .btn.send span{display:none}
+  .btn.send span,.btn.ia span{display:none}
   .layout{grid-template-columns:1fr}
   aside{border-right:0;border-bottom:1px solid var(--line);padding:8px 10px;overflow-x:auto}
   :root[data-panel="superior"] aside{padding:8px 10px}
@@ -250,6 +274,10 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
   <div class="today" id="today"></div>
   <div class="spacer"></div>
   <div class="sync" id="sync" title=""><i></i><span>Guardado</span></div>
+  <button class="btn ia" id="btnIA" title="Revisar el correo con IA">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6zM19 14l.9 2.6L22 17.5l-2.1.8L19 21l-.9-2.7L16 17.5l2.1-.9z"/></svg>
+    <span>Correo IA</span>
+  </button>
   <button class="btn primary send" id="btnSend" title="Enviar resumen por mail">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
     <span>Enviar resumen</span>
@@ -359,6 +387,10 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
       <label class="switch"><input type="checkbox" id="setAuto"> Enviar todas las hojas de lunes a viernes a las
         <select id="setHora" style="width:auto;padding:4px 8px"></select></label>
     </div>
+    <details class="adv" id="setIA"><summary>Correo con IA</summary>
+      <div class="fld"><label for="setIAApi">URL del script de correo (cuenta AMELIFE)</label><input type="url" id="setIAApi" placeholder="https://script.google.com/macros/s/…/exec"></div>
+      <div class="fld"><label for="setIAKey">Clave del correo</label><input type="password" id="setIAKey" autocomplete="off" placeholder="co-…"></div>
+    </details>
     <details class="adv"><summary>Conexión</summary>
       <div class="fld"><label for="setApi">URL de la aplicación web (Apps Script)</label><input type="url" id="setApi" placeholder="https://script.google.com/macros/s/…/exec"></div>
       <div class="fld"><button type="button" class="btn" id="btnReload">Volver a cargar datos</button></div>
@@ -366,6 +398,17 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
     <div class="err" id="setErr"></div>
     <div class="dlg-actions"><span class="spacer"></span><button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Guardar</button></div>
   </form>
+</dialog>
+
+<!-- Correo con IA -->
+<dialog id="dlgIA" class="wide">
+  <div class="dlg">
+    <div class="ia-head"><h3>Correo pendiente</h3><span class="spacer"></span><button type="button" class="ib" data-close aria-label="Cerrar">✕</button></div>
+    <p class="hint">La IA lee los correos recientes de amelife@amelife-911.com y propone lo que parece sin responder. Elegí qué agregar, cambiá el título, la hoja y la fecha.</p>
+    <div class="ia-ctrl"><label>Revisar los últimos <select id="iaDias"><option value="1">1 día</option><option value="3">3 días</option><option value="7">7 días</option><option value="14">14 días</option><option value="30">30 días</option></select></label><button type="button" class="btn" id="iaGo">Revisar correo</button></div>
+    <div id="iaBody"></div>
+    <div class="dlg-actions"><span class="spacer"></span><button type="button" class="btn" data-close>Cerrar</button><button type="button" class="btn primary" id="iaAdd" disabled>Agregar</button></div>
+  </div>
 </dialog>
 
 <!-- Confirmación -->
@@ -725,7 +768,10 @@ function renderList() {
 }
 
 /* ====== Formato ====== */
-function inlineMd(s) { return esc(s).replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>'); }
+function inlineMd(s) {
+  return esc(s).replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + (u.includes('mail.google.com') ? 'Abrir mail' : u) + '</a>');
+}
 function mdLite(s) {
   const lines = String(s || '').split('\n'); let html = '', list = null, buf = [];
   const flush = () => { if (buf.length) { html += '<div>' + buf.join('<br>') + '</div>'; buf = []; } };
@@ -790,6 +836,7 @@ let lastTA = null;
 document.addEventListener('focusin', e => { if (e.target.tagName === 'TEXTAREA') lastTA = e.target; });
 document.addEventListener('mousedown', e => { if (e.target.closest('.fb')) e.preventDefault(); });
 document.addEventListener('click', e => {
+  if (e.target.closest('a[href]')) return;
   const fb = e.target.closest('.fb');
   if (fb) {
     const box = fb.closest('.editor, .adder');
@@ -881,6 +928,7 @@ $('#fPersona').onchange = e => { S.persona = e.target.value; renderList(); };
 $('#fQ').oninput = e => { S.q = e.target.value.trim(); renderList(); };
 $('#btnEditSheet').onclick = () => openSheetDlg(hojaById(S.hoja));
 $('#btnSend').onclick = openSend;
+$('#btnIA').onclick = openIA;
 $('#btnSet').onclick = () => openSettings();
 
 /* ====== Hojas ====== */
@@ -990,6 +1038,7 @@ async function sendInBackground(p) {
 function openSettings(msg) {
   const d = $('#dlgSet'); if (d.open) { if (msg) $('#setErr').textContent = msg; return; }
   $('#setKey').value = apiKey(); $('#setApi').value = apiUrl();
+  $('#setIAApi').value = iaUrl(); $('#setIAKey').value = iaKey();
   $('#setTo').value = S.config.destinatario || '';
   $('#setPer').value = personas().join('\n');
   $('#setAuto').checked = S.config.autoEnvio === 'si';
@@ -1004,6 +1053,7 @@ $('#formSet').onsubmit = e => {
   const key = $('#setKey').value.trim(), url = $('#setApi').value.trim();
   const to = $('#setTo').value.trim();
   if (to && !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(to)) { $('#setErr').textContent = 'El email del destinatario no es válido.'; return; }
+  LS.set('iaapi', $('#setIAApi').value.trim()); LS.set('iakey', $('#setIAKey').value.trim());
   const connChanged = key !== apiKey() || url !== apiUrl();
   LS.set('key', key); LS.set('api', url && url !== API_DEFAULT ? url : '');
   const per = $('#setPer').value.split('\n').map(s => s.trim().replace(/,/g, ' ')).filter(Boolean);
@@ -1015,6 +1065,103 @@ $('#formSet').onsubmit = e => {
   if (connChanged) load(); else pump();
 };
 $('#btnReload').onclick = () => { $('#dlgSet').close(); load(true); };
+
+/* ====== Correo con IA ====== */
+const IA = { items: [], loading: false, error: '', info: '', dias: LS.get('iadias', 7) };
+function iaUrl() { return LS.get('iaapi', ''); }
+function iaKey() { return LS.get('iakey', ''); }
+async function iaApi(action, payload, ms = 170000) {
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(iaUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: iaKey(), action, payload }), signal: ctl.signal });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Error del script de correo');
+    return j.data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw Object.assign(new Error('La revisión tardó demasiado. Probá con menos días.'), { timeout: true });
+    throw e;
+  } finally { clearTimeout(tm); }
+}
+function setIABtn() {
+  const b = $('#btnIA'); b.classList.toggle('busy', IA.loading);
+  b.querySelector('span').textContent = IA.loading ? 'Revisando…' : (IA.items.length ? `Correo IA (${IA.items.length})` : 'Correo IA');
+  let dot = b.querySelector('i'); if (IA.loading && !dot) { dot = document.createElement('i'); b.appendChild(dot); } if (!IA.loading && dot) dot.remove();
+}
+function openIA() { renderIA(); $('#dlgIA').showModal(); if (!IA.items.length && !IA.loading && iaUrl() && iaKey()) iaRevisar(); }
+const iaFecha = k => k === 'hoy' ? hoyStr() : k === 'man' ? addDays(hoyStr(), 1) : k === 'prox' ? nextMonday() : '';
+async function iaRevisar() {
+  if (IA.loading) return;
+  if (!iaUrl() || !iaKey()) { IA.error = ''; renderIA(); return; }
+  IA.loading = true; IA.error = ''; IA.info = ''; setIABtn(); renderIA();
+  try {
+    const d = await iaApi('pendientes', { dias: IA.dias });
+    const hoja = S.hoja !== '__hoy' && hojaById(S.hoja) ? S.hoja : S.hojas[0].id;
+    IA.items = (d.items || []).map(it => Object.assign({ sel: it.urgencia !== 'baja', hojaId: hoja, cuando: it.urgencia === 'baja' ? 'prox' : 'hoy', persona: it.contacto || '' }, it));
+    IA.info = IA.items.length ? `${IA.items.length} correo${IA.items.length > 1 ? 's' : ''} para revisar, de ${d.revisados} sin respuesta tuya.` : `Revisé ${d.revisados} correo${d.revisados !== 1 ? 's' : ''} sin respuesta tuya y no encontré nada pendiente.`;
+    if (!$('#dlgIA').open) toast('Correo IA: ' + IA.info, () => openIA(), 'Ver', 12000);
+  } catch (e) {
+    IA.error = e.message;
+    if (!$('#dlgIA').open) toast('Correo IA: ' + IA.error, () => openIA(), 'Ver', 12000);
+  } finally { IA.loading = false; setIABtn(); renderIA(); }
+}
+function renderIA() {
+  const body = $('#iaBody');
+  $('#iaDias').value = String(IA.dias);
+  $('#iaGo').disabled = IA.loading || !iaUrl() || !iaKey();
+  $('#iaGo').textContent = IA.loading ? 'Revisando…' : (IA.items.length ? 'Volver a revisar' : 'Revisar correo');
+  const hojasOpt = sel => S.hojas.map(h => `<option value="${esc(h.id)}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)}</option>`).join('');
+  const cuandoOpt = v => [['hoy', 'Hoy'], ['man', 'Mañana'], ['prox', 'Semana entrante'], ['sin', 'Sin fecha']].map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
+  let h = '';
+  if (!iaUrl() || !iaKey()) h = '<div class="empty"><b>Falta conectar el correo.</b>Cargá la URL y la clave del script de correo en Ajustes, sección Correo con IA.</div>';
+  else if (IA.loading && !IA.items.length) h = '<div class="empty"><b>Leyendo la bandeja y analizando…</b>Puede tardar hasta un minuto. Podés cerrar esta ventana y seguir usando el anotador: te aviso cuando termine.</div>';
+  if (IA.error) h += `<div class="err">${esc(IA.error)}</div>`;
+  if (IA.info && !IA.loading) h += `<p class="hint" style="margin:8px 0 0">${esc(IA.info)}</p>`;
+  if (IA.items.length) {
+    const all = IA.items.every(i => i.sel);
+    h += `<div class="ia-all"><span>Hoja para las marcadas</span><select id="iaHojaAll"><option value="">Elegir…</option>${hojasOpt('')}</select><button type="button" class="gact" data-ia="selall">${all ? 'Desmarcar todas' : 'Marcar todas'}</button></div>`;
+    h += IA.items.map((it, i) => `<div class="ia-item ${it.sel ? 'on' : ''}" data-i="${i}">
+      <input type="checkbox" class="ia-sel" data-ia="sel" ${it.sel ? 'checked' : ''} aria-label="Agregar como tarea">
+      <div class="ia-main">
+        <div class="ia-top"><input class="ia-title" data-iaf="titulo" value="${esc(it.titulo)}" maxlength="200" aria-label="Título de la tarea">${it.urgencia === 'alta' ? '<span class="tag venc">Urgente</span>' : it.urgencia === 'baja' ? '<span class="tag">Baja</span>' : ''}</div>
+        <div class="ia-meta">${esc(it.de)}, ${esc(it.fecha)}: ${esc(it.asunto)} <a href="${esc(it.link)}" target="_blank" rel="noopener">Abrir mail</a></div>
+        ${it.resumen ? `<div class="ia-res">${esc(it.resumen)}</div>` : ''}
+        <div class="ia-opts"><label>Hoja <select data-iaf="hojaId">${hojasOpt(it.hojaId)}</select></label><label>Cuándo <select data-iaf="cuando">${cuandoOpt(it.cuando)}</select></label><label>Hablar con <input data-iaf="persona" list="iaPersonas" value="${esc(it.persona)}" maxlength="30"></label><button type="button" class="gact red" data-ia="desc">Descartar</button></div>
+      </div>
+    </div>`).join('');
+    h += `<datalist id="iaPersonas">${personas().map(p => `<option value="${esc(p)}">`).join('')}</datalist>`;
+  }
+  body.innerHTML = h;
+  const n = IA.items.filter(i => i.sel && i.titulo.trim()).length;
+  $('#iaAdd').disabled = !n; $('#iaAdd').textContent = n ? `Agregar ${n} tarea${n > 1 ? 's' : ''}` : 'Agregar';
+}
+function iaDescartar(ids) { if (ids.length) iaApi('descartar', { ids }, 60000).catch(() => {}); }
+function iaAgregar() {
+  const sel = IA.items.filter(i => i.sel && i.titulo.trim()); if (!sel.length) return;
+  sel.forEach(it => {
+    const t = { id: uid('t'), hojaId: hojaById(it.hojaId) ? it.hojaId : S.hojas[0].id, texto: it.titulo.trim(), hecha: false, fecha: iaFecha(it.cuando), persona: (it.persona || '').trim().replace(/,/g, ' ').slice(0, 30), nota: (it.resumen ? it.resumen + '\n' : '') + it.link, prioridad: it.urgencia === 'alta', creada: nowIso(), completada: '' };
+    S.tareas.push(t); enqueue('upsertTask', t);
+  });
+  iaDescartar(sel.map(i => i.id));
+  IA.items = IA.items.filter(i => !sel.includes(i));
+  IA.info = IA.items.length ? `Quedan ${IA.items.length} sin decidir.` : '';
+  render(); renderIA(); setIABtn();
+  toast(`${sel.length} tarea${sel.length > 1 ? 's' : ''} agregada${sel.length > 1 ? 's' : ''} desde el correo`);
+  if (!IA.items.length) $('#dlgIA').close();
+}
+$('#iaGo').onclick = iaRevisar;
+$('#iaAdd').onclick = iaAgregar;
+$('#iaDias').onchange = e => { IA.dias = Number(e.target.value) || 7; LS.set('iadias', IA.dias); };
+$('#iaBody').addEventListener('input', e => { const f = e.target.dataset.iaf; if (!f) return; const i = Number(e.target.closest('[data-i]').dataset.i); IA.items[i][f] = e.target.value; if (f === 'titulo') { const n = IA.items.filter(x => x.sel && x.titulo.trim()).length; $('#iaAdd').disabled = !n; } });
+$('#iaBody').addEventListener('change', e => {
+  if (e.target.id === 'iaHojaAll') { if (e.target.value) IA.items.forEach(x => { if (x.sel) x.hojaId = e.target.value; }); renderIA(); return; }
+  const f = e.target.dataset.iaf; if (f) { IA.items[Number(e.target.closest('[data-i]').dataset.i)][f] = e.target.value; return; }
+  if (e.target.dataset.ia === 'sel') { IA.items[Number(e.target.closest('[data-i]').dataset.i)].sel = e.target.checked; renderIA(); }
+});
+$('#iaBody').addEventListener('click', e => {
+  const b = e.target.closest('button[data-ia]'); if (!b) return;
+  if (b.dataset.ia === 'selall') { const all = IA.items.every(i => i.sel); IA.items.forEach(i => i.sel = !all); renderIA(); return; }
+  if (b.dataset.ia === 'desc') { const i = Number(b.closest('[data-i]').dataset.i); const [it] = IA.items.splice(i, 1); iaDescartar([it.id]); renderIA(); setIABtn(); }
+});
 
 /* ====== Confirmación y avisos ====== */
 function confirmDlg(title, text, ok = 'Confirmar') {
