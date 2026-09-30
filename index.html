@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.0.1 — 2026-09-30 09:00 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.1 — 2026-09-30 09:10 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -69,9 +69,10 @@ main{padding:30px 40px 90px;max-width:940px;width:100%}
 /* Alta rápida */
 .adder{border:1px solid var(--line);border-radius:11px;padding:12px 14px 12px;background:#fff;transition:border-color .15s,box-shadow .15s}
 .adder:focus-within{border-color:#B4C0CB;box-shadow:0 2px 14px rgba(28,38,48,.06)}
-.adder-top{display:flex;gap:10px;align-items:center}
-.adder-top input{flex:1;min-width:0;border:0;outline:0;font-size:16px;padding:5px 0;background:none}
-.adder-top input::placeholder{color:var(--ink3)}
+.adder-top{display:flex;gap:10px;align-items:flex-start}
+.adder-top textarea{flex:1;min-width:0;border:0;outline:0;font-size:16px;line-height:1.5;padding:5px 0;background:none;resize:none;max-height:260px;overflow-y:auto}
+.adder-top textarea::placeholder{color:var(--ink3)}
+.kbd-hint{font-size:12px;color:var(--ink3);margin-top:2px}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .row .lbl{font-size:12.5px;color:var(--ink3);font-weight:600;min-width:74px}
 .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;font-weight:600;color:var(--ink2);line-height:1.45}
@@ -114,7 +115,7 @@ main{padding:30px 40px 90px;max-width:940px;width:100%}
 .check:hover{border-color:var(--ink)}
 .is-done .check{background:var(--ok);border-color:var(--ok)}
 .tb{flex:1;min-width:0;cursor:pointer}
-.txt{overflow-wrap:anywhere}
+.txt{overflow-wrap:anywhere;white-space:pre-wrap}
 .prio .txt{font-weight:700}
 .is-done .txt{color:var(--ink3);text-decoration:line-through;font-weight:500}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px}
@@ -234,9 +235,10 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
 
     <section class="adder" id="adder">
       <div class="adder-top">
-        <input id="newText" type="text" maxlength="2000" autocomplete="off" placeholder="Anotá una tarea y presioná Enter">
+        <textarea id="newText" rows="1" maxlength="4000" autocomplete="off" placeholder="Anotá una tarea y presioná Enter"></textarea>
         <button class="btn primary" id="btnAdd">Agregar</button>
       </div>
+      <div class="kbd-hint">Enter agrega. Shift+Enter baja de línea.</div>
       <div class="row"><span class="lbl">Cuándo</span><span id="dChips" class="row" style="margin:0"></span></div>
       <div class="row"><span class="lbl">Hablar con</span><span id="pChips" class="row" style="margin:0"></span></div>
       <div class="row"><span class="lbl">Más</span>
@@ -458,6 +460,7 @@ function addTask() {
   S.tareas.push(t); enqueue('upsertTask', t);
   inp.value = ''; Object.assign(D, { fecha: S.hoja === '__hoy' ? hoyStr() : '', persona: '', prioridad: false, nota: '', notaOpen: false, _otra: false, _picking: false });
   $('#newNote').value = '';
+  inp.style.height = '';
   render(); inp.focus();
   if (!visible().some(x => x.id === t.id)) toast('Tarea agregada en ' + (hojaById(hojaId)?.nombre || 'la hoja'));
 }
@@ -607,14 +610,14 @@ function itemHTML(t) {
 function editorHTML() {
   const E = S.E;
   return `<div class="editor" data-id="${esc(E.id)}">
-    <textarea class="e-txt" data-f="texto" rows="2" maxlength="2000" aria-label="Texto">${esc(E.texto)}</textarea>
+    <textarea class="e-txt" data-f="texto" rows="${Math.min(12, Math.max(2, String(E.texto).split('\n').length + 1))}" maxlength="4000" aria-label="Texto">${esc(E.texto)}</textarea>
     <div class="row"><span class="lbl">Cuándo</span>${dateChips(E, 'e')}</div>
     <div class="row"><span class="lbl">Hablar con</span>${personaChips(E, 'e')}</div>
-    <div class="row" style="align-items:flex-start"><span class="lbl" style="padding-top:8px">Nota</span><textarea data-f="nota" rows="2" maxlength="4000" style="flex:1" placeholder="Contexto, qué hay que decir…">${esc(E.nota)}</textarea></div>
+    <div class="row" style="align-items:flex-start"><span class="lbl" style="padding-top:8px">Nota</span><textarea data-f="nota" rows="${Math.min(10, Math.max(2, String(E.nota || '').split('\n').length + 1))}" maxlength="4000" style="flex:1" placeholder="Contexto, qué hay que decir…">${esc(E.nota)}</textarea></div>
     <div class="row"><span class="lbl">Hoja</span><select data-f="hojaId">${S.hojas.map(h => `<option value="${esc(h.id)}" ${h.id === E.hojaId ? 'selected' : ''}>${esc(h.nombre)}</option>`).join('')}</select>
       <button type="button" class="tog ${E.prioridad ? 'on' : ''}" data-a="e-prio">${I.star} Prioridad</button>
       <button type="button" class="tog ${E.hecha ? 'on nt' : ''}" data-a="e-done">${I.check} Terminada</button></div>
-    <div class="ed-actions"><button class="btn danger" data-a="e-del">Eliminar</button><span class="spacer"></span><button class="btn" data-a="e-cancel">Cancelar</button><button class="btn primary" data-a="e-save">Guardar</button></div>
+    <div class="ed-actions"><button class="btn danger" data-a="e-del">Eliminar</button><span class="spacer"></span><span class="kbd-hint">Cmd/Ctrl+Enter guarda</span><button class="btn" data-a="e-cancel">Cancelar</button><button class="btn primary" data-a="e-save">Guardar</button></div>
   </div>`;
 }
 function renderList() {
@@ -707,7 +710,9 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.f && S.E) S.E[t.dataset.f] = t.value;
   if (t.id === 'newNote') D.nota = t.value;
+  if (t.tagName === 'TEXTAREA' && (t.id === 'newText' || t.dataset.f)) autoGrow(t);
 });
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.classList.contains('dpick')) { const o = scopeObj(t.dataset.sc); if (t.value) { o.fecha = t.value; o._picking = false; rerenderScope(t.dataset.sc); } }
@@ -722,10 +727,10 @@ document.addEventListener('keydown', e => {
   }
   if (S.E && t.closest?.('.editor')) {
     if (e.key === 'Escape') { S.E = null; renderList(); }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || t.classList.contains('e-txt') && !e.shiftKey)) { e.preventDefault(); saveEditor(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEditor(); }
     return;
   }
-  if (t.id === 'newText' && e.key === 'Enter') { e.preventDefault(); addTask(); return; }
+  if (t.id === 'newText' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); addTask(); return; }
   const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || document.querySelector('dialog[open]');
   if (!typing && (e.key === 'n' || e.key === '/')) { e.preventDefault(); $('#newText').focus(); }
 });
