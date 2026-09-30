@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.6 — 2026-09-30 10:45 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.7 — 2026-09-30 11:10 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -82,6 +82,8 @@ dialog.wide{width:min(900px,calc(100vw - 24px))}
 .ia-opts label{display:inline-flex;gap:6px;align-items:center}
 .ia-opts input{width:130px}
 .ia-opts .gact{margin-left:auto}
+.ia-new{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 8px;padding:10px;border:1px dashed var(--focusLine);border-radius:10px}
+.ia-new input{flex:1;min-width:180px;border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:14px;background:var(--surface)}
 .btn.send.busy i{width:8px;height:8px;border-radius:50%;background:var(--gold);display:inline-block;animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
 .btn[disabled]{opacity:.55;cursor:default}
@@ -1109,7 +1111,7 @@ function renderIA() {
   $('#iaDias').value = String(IA.dias);
   $('#iaGo').disabled = IA.loading || !iaUrl() || !iaKey();
   $('#iaGo').textContent = IA.loading ? 'Revisando…' : (IA.items.length ? 'Volver a revisar' : 'Revisar correo');
-  const hojasOpt = sel => S.hojas.map(h => `<option value="${esc(h.id)}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)}</option>`).join('');
+  const hojasOpt = sel => S.hojas.map(h => `<option value="${esc(h.id)}" ${h.id === sel ? 'selected' : ''}>${esc(h.nombre)}</option>`).join('') + '<option value="__new">+ Nueva hoja…</option>';
   const cuandoOpt = v => [['hoy', 'Hoy'], ['man', 'Mañana'], ['prox', 'Semana entrante'], ['sin', 'Sin fecha']].map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
   let h = '';
   if (!iaUrl() || !iaKey()) h = '<div class="empty"><b>Falta conectar el correo.</b>Cargá la URL y la clave del script de correo en Ajustes, sección Correo con IA.</div>';
@@ -1118,7 +1120,8 @@ function renderIA() {
   if (IA.info && !IA.loading) h += `<p class="hint" style="margin:8px 0 0">${esc(IA.info)}</p>`;
   if (IA.items.length) {
     const all = IA.items.every(i => i.sel);
-    h += `<div class="ia-all"><span>Hoja para las marcadas</span><select id="iaHojaAll"><option value="">Elegir…</option>${hojasOpt('')}</select><button type="button" class="gact" data-ia="selall">${all ? 'Desmarcar todas' : 'Marcar todas'}</button></div>`;
+    h += `<div class="ia-all"><span>Hoja para las marcadas</span><select id="iaHojaAll"><option value="">Elegir…</option>${hojasOpt('')}</select><button type="button" class="gact" data-ia="newsheet">+ Nueva hoja</button><button type="button" class="gact" data-ia="selall" style="margin-left:0">${all ? 'Desmarcar todas' : 'Marcar todas'}</button></div>`;
+    if (IA.newOpen) h += `<div class="ia-new"><input id="iaNewName" maxlength="60" placeholder="Nombre de la hoja nueva" aria-label="Nombre de la hoja nueva"><button type="button" class="btn primary" data-ia="create">Crear hoja</button><button type="button" class="btn" data-ia="cancelnew">Cancelar</button><span class="kbd-hint" style="width:100%">Se asigna a ${IA.newTarget != null && IA.items[IA.newTarget] ? 'esta propuesta: ' + esc(IA.items[IA.newTarget].titulo) : 'todas las propuestas marcadas'}.</span></div>`;
     h += IA.items.map((it, i) => `<div class="ia-item ${it.sel ? 'on' : ''}" data-i="${i}">
       <input type="checkbox" class="ia-sel" data-ia="sel" ${it.sel ? 'checked' : ''} aria-label="Agregar como tarea">
       <div class="ia-main">
@@ -1134,6 +1137,20 @@ function renderIA() {
   const n = IA.items.filter(i => i.sel && i.titulo.trim()).length;
   $('#iaAdd').disabled = !n; $('#iaAdd').textContent = n ? `Agregar ${n} tarea${n > 1 ? 's' : ''}` : 'Agregar';
 }
+function iaNueva(target) { IA.newOpen = true; IA.newTarget = target; renderIA(); setTimeout(() => $('#iaNewName')?.focus(), 0); }
+function iaCrearHoja() {
+  const inp = $('#iaNewName'); const nombre = (inp?.value || '').trim().slice(0, 60);
+  if (!nombre) { inp?.focus(); return; }
+  let h = S.hojas.find(x => x.nombre.toLowerCase() === nombre.toLowerCase());
+  if (!h) { h = { id: uid('h'), nombre, color: PALETTE[S.hojas.length % PALETTE.length], orden: Math.max(0, ...S.hojas.map(x => x.orden)) + 1 }; S.hojas.push(h); enqueue('upsertHoja', h); toast(`Hoja "${nombre}" creada`); }
+  if (IA.newTarget != null && IA.items[IA.newTarget]) IA.items[IA.newTarget].hojaId = h.id; else IA.items.forEach(x => { if (x.sel) x.hojaId = h.id; });
+  IA.newOpen = false; IA.newTarget = null; renderSide(); renderIA();
+}
+$('#iaBody').addEventListener('keydown', e => {
+  if (e.target.id !== 'iaNewName') return;
+  if (e.key === 'Enter') { e.preventDefault(); iaCrearHoja(); }
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); IA.newOpen = false; IA.newTarget = null; renderIA(); }
+});
 function iaDescartar(ids) { if (ids.length) iaApi('descartar', { ids }, 60000).catch(() => {}); }
 function iaAgregar() {
   const sel = IA.items.filter(i => i.sel && i.titulo.trim()); if (!sel.length) return;
@@ -1153,12 +1170,15 @@ $('#iaAdd').onclick = iaAgregar;
 $('#iaDias').onchange = e => { IA.dias = Number(e.target.value) || 7; LS.set('iadias', IA.dias); };
 $('#iaBody').addEventListener('input', e => { const f = e.target.dataset.iaf; if (!f) return; const i = Number(e.target.closest('[data-i]').dataset.i); IA.items[i][f] = e.target.value; if (f === 'titulo') { const n = IA.items.filter(x => x.sel && x.titulo.trim()).length; $('#iaAdd').disabled = !n; } });
 $('#iaBody').addEventListener('change', e => {
-  if (e.target.id === 'iaHojaAll') { if (e.target.value) IA.items.forEach(x => { if (x.sel) x.hojaId = e.target.value; }); renderIA(); return; }
-  const f = e.target.dataset.iaf; if (f) { IA.items[Number(e.target.closest('[data-i]').dataset.i)][f] = e.target.value; return; }
+  if (e.target.id === 'iaHojaAll') { if (e.target.value === '__new') iaNueva(null); else if (e.target.value) { IA.items.forEach(x => { if (x.sel) x.hojaId = e.target.value; }); renderIA(); } return; }
+  const f = e.target.dataset.iaf; if (f) { const i = Number(e.target.closest('[data-i]').dataset.i); if (f === 'hojaId' && e.target.value === '__new') { iaNueva(i); return; } IA.items[i][f] = e.target.value; return; }
   if (e.target.dataset.ia === 'sel') { IA.items[Number(e.target.closest('[data-i]').dataset.i)].sel = e.target.checked; renderIA(); }
 });
 $('#iaBody').addEventListener('click', e => {
   const b = e.target.closest('button[data-ia]'); if (!b) return;
+  if (b.dataset.ia === 'newsheet') { iaNueva(null); return; }
+  if (b.dataset.ia === 'create') { iaCrearHoja(); return; }
+  if (b.dataset.ia === 'cancelnew') { IA.newOpen = false; IA.newTarget = null; renderIA(); return; }
   if (b.dataset.ia === 'selall') { const all = IA.items.every(i => i.sel); IA.items.forEach(i => i.sel = !all); renderIA(); return; }
   if (b.dataset.ia === 'desc') { const i = Number(b.closest('[data-i]').dataset.i); const [it] = IA.items.splice(i, 1); iaDescartar([it.id]); renderIA(); setIABtn(); }
 });
