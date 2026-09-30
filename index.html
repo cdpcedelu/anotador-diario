@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 1.2 — 2026-09-30 09:30 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 1.3 — 2026-09-30 10:00 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -142,7 +142,15 @@ main{padding:30px 40px 90px;max-width:940px;width:100%}
 .check:hover{border-color:var(--ink)}
 .is-done .check{background:var(--ok);border-color:var(--ok)}
 .tb{flex:1;min-width:0;cursor:pointer}
-.txt{overflow-wrap:anywhere;white-space:pre-wrap}
+.txt{overflow-wrap:anywhere}
+.txt ul,.txt ol,.note ul,.note ol{margin:2px 0;padding-left:22px}
+.txt li,.note li{margin:1px 0}
+.txt strong,.note strong{font-weight:800}
+.fmt{display:inline-flex;gap:2px;border:1px solid var(--line);border-radius:7px;padding:2px;background:var(--surface)}
+.fb{border:0;background:none;width:28px;height:26px;border-radius:5px;display:inline-grid;place-items:center;color:var(--ink2);padding:0;font-size:14px}
+.fb:hover{background:var(--soft);color:var(--ink)}
+.adder-sub{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:6px}
+.editor .fmt{margin-bottom:8px}
 .prio .txt{font-weight:700}
 .is-done .txt{color:var(--ink3);text-decoration:line-through;font-weight:500}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px}
@@ -155,7 +163,7 @@ main{padding:30px 40px 90px;max-width:940px;width:100%}
 .tag.sh::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
 .who{--pc:#5E6570;font-size:12px;font-weight:700;color:var(--pc);background:color-mix(in srgb,var(--pc) 11%,var(--surface));padding:1px 9px 1px 7px;border-radius:999px;display:inline-flex;gap:4px;align-items:center}
 :root[data-theme="dark"] .who{color:color-mix(in srgb,var(--pc) 45%,#fff);background:color-mix(in srgb,var(--pc) 30%,var(--surface))}
-.note{font-size:13.5px;color:var(--ink2);margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere;padding-left:10px;border-left:2px solid var(--line)}
+.note{font-size:13.5px;color:var(--ink2);margin-top:4px;overflow-wrap:anywhere;padding-left:10px;border-left:2px solid var(--line)}
 .acts{display:flex;gap:1px;opacity:0;transition:opacity .12s}
 .task:hover .acts,.task:focus-within .acts{opacity:1}
 .ib.star.on{color:var(--gold);opacity:1}
@@ -269,7 +277,7 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
         <textarea id="newText" rows="1" maxlength="4000" autocomplete="off" placeholder="Anotá una tarea y presioná Enter"></textarea>
         <button class="btn primary" id="btnAdd">Agregar</button>
       </div>
-      <div class="kbd-hint">Enter agrega. Shift+Enter baja de línea.</div>
+      <div class="adder-sub"><div class="fmt"><button type="button" class="fb" data-fmt="bold" title="Negrita (Cmd+B)"><b>B</b></button><button type="button" class="fb" data-fmt="ul" title="Viñetas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg></button><button type="button" class="fb" data-fmt="ol" title="Numeración"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M4 4.5 5 4v4M4 8h2M4 11.5a1 1 0 0 1 2 .3c0 .8-2 1.7-2 2.2h2M4 17h1.5a.75.75 0 0 1 0 1.5H4.5 5.5a.75.75 0 0 1 0 1.5H4" stroke-width="1.4"/></svg></button></div><span class="kbd-hint">Enter agrega. Shift+Enter baja de línea. Cmd+B negrita.</span></div>
       <div class="row"><span class="lbl">Cuándo</span><span id="dChips" class="row" style="margin:0"></span></div>
       <div class="row"><span class="lbl">Hablar con</span><span id="pChips" class="row" style="margin:0"></span></div>
       <div class="row"><span class="lbl">Más</span>
@@ -376,6 +384,8 @@ const I = {
   starO: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>',
   trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
   chat: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>',
+  ul: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg>',
+  ol: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M4 4.5 5 4v4M4 8h2M4 11.5a1 1 0 0 1 2 .3c0 .8-2 1.7-2 2.2h2M4 17h1.5a.75.75 0 0 1 0 1.5H4.5 5.5a.75.75 0 0 1 0 1.5H4" stroke-width="1.4"/></svg>',
   today: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
 };
 
@@ -429,16 +439,29 @@ function hojaById(id) { return S.hojas.find(h => h.id === id); }
 /* ====== Conexión ====== */
 function apiUrl() { return LS.get('api', '') || API_DEFAULT; }
 function apiKey() { return LS.get('key', ''); }
-async function api(action, payload) {
+async function api(action, payload, ms = 45000) {
   const url = apiUrl();
   if (!url) throw Object.assign(new Error('Falta la URL de conexión'), { setup: true });
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: apiKey(), action, payload }) });
-  const j = await r.json();
-  if (!j.ok) { const e = new Error(j.error || 'Error del servidor'); if (j.auth) e.auth = true; throw e; }
-  return j.data;
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: apiKey(), action, payload }), signal: ctl.signal });
+    const j = await r.json();
+    if (!j.ok) { const e = new Error(j.error || 'Error del servidor'); if (j.auth) e.auth = true; throw e; }
+    return j.data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw Object.assign(new Error('El servidor no respondió a tiempo'), { timeout: true });
+    throw e;
+  } finally { clearTimeout(tm); }
 }
-let Q = LS.get('q', []), busy = false, lastLoad = 0, retryT = null;
-function enqueue(action, payload) { Q.push({ action, payload }); LS.set('q', Q); saveCache(); pump(); }
+let Q = LS.get('q', []), busy = false, inflight = 0, lastLoad = 0, retryT = null;
+S.batch = LS.get('batch', false);
+function enqueue(action, payload) {
+  if ((action === 'upsertTask' || action === 'upsertHoja') && payload && payload.id) {
+    const from = busy ? inflight : 0;
+    for (let i = Q.length - 1; i >= from; i--) if (Q[i].action === action && Q[i].payload && Q[i].payload.id === payload.id) Q.splice(i, 1);
+  }
+  Q.push({ action, payload: JSON.parse(JSON.stringify(payload)) }); LS.set('q', Q); saveCache(); pump();
+}
 async function pump() {
   if (busy) return;
   if (!Q.length) { setSync('ok'); return; }
@@ -446,15 +469,16 @@ async function pump() {
   if (!navigator.onLine) { setSync('offline'); return; }
   busy = true; setSync('saving');
   try {
-    await api(Q[0].action, Q[0].payload);
-    Q.shift(); LS.set('q', Q); busy = false; pump();
+    if (S.batch && Q.length > 1) { inflight = Math.min(Q.length, 40); await api('batch', { ops: Q.slice(0, inflight) }, 60000); Q.splice(0, inflight); }
+    else { inflight = 1; await api(Q[0].action, Q[0].payload); Q.shift(); }
+    inflight = 0; LS.set('q', Q); busy = false; pump();
   } catch (e) {
-    busy = false;
+    busy = false; inflight = 0;
     if (e.auth) { setSync('auth'); openSettings('La clave de acceso no es correcta. Ingresala de nuevo.'); return; }
     setSync('err'); clearTimeout(retryT); retryT = setTimeout(pump, 6000);
   }
 }
-function drain(timeout = 25000) {
+function drain(timeout = 60000) {
   pump();
   return new Promise((res, rej) => {
     const t0 = Date.now();
@@ -478,6 +502,7 @@ async function load(force) {
     S.hojas = d.hojas.length ? d.hojas : S.hojas;
     S.tareas = d.tareas;
     S.config = Object.assign({}, S.config, d.config);
+    S.batch = !!d.batch; LS.set('batch', S.batch);
     if (S.hoja !== '__hoy' && !hojaById(S.hoja)) S.hoja = '__hoy';
     saveCache(); lastLoad = Date.now(); setSync('ok'); render();
   } catch (e) {
@@ -632,9 +657,9 @@ function itemHTML(t) {
   return `<div class="${cls}" data-id="${esc(t.id)}">
     <button class="check" data-a="done" aria-label="${t.hecha ? 'Marcar como pendiente' : 'Marcar como terminada'}">${t.hecha ? I.check : ''}</button>
     <div class="tb" data-a="edit" title="Editar">
-      <div class="txt">${esc(t.texto)}</div>
+      <div class="txt">${mdLite(t.texto)}</div>
       <div class="meta">${tagHTML(t)}${t.prioridad && !t.hecha ? '<span class="tag prio">Prioridad</span>' : ''}${t.persona ? `<span class="who" style="--pc:${pcol(t.persona)}" title="Hablar con ${esc(t.persona)}">${I.chat}${esc(t.persona)}</span>` : ''}${hoja ? `<span class="tag sh" style="--c:${esc(hoja.color)}">${esc(hoja.nombre)}</span>` : ''}</div>
-      ${t.nota ? `<div class="note">${esc(t.nota)}</div>` : ''}
+      ${t.nota ? `<div class="note">${mdLite(t.nota)}</div>` : ''}
     </div>
     <div class="acts">
       <button class="ib star ${t.prioridad ? 'on' : ''}" data-a="prio" title="Prioridad" aria-label="Prioridad">${t.prioridad ? I.star : I.starO}</button>
@@ -645,6 +670,7 @@ function itemHTML(t) {
 function editorHTML() {
   const E = S.E;
   return `<div class="editor" data-id="${esc(E.id)}">
+    <div class="fmt"><button type="button" class="fb" data-fmt="bold" title="Negrita (Cmd+B)"><b>B</b></button><button type="button" class="fb" data-fmt="ul" title="Viñetas">${I.ul}</button><button type="button" class="fb" data-fmt="ol" title="Numeración">${I.ol}</button></div>
     <textarea class="e-txt" data-f="texto" rows="${Math.min(12, Math.max(2, String(E.texto).split('\n').length + 1))}" maxlength="4000" aria-label="Texto">${esc(E.texto)}</textarea>
     <div class="row"><span class="lbl">Cuándo</span>${dateChips(E, 'e')}</div>
     <div class="row"><span class="lbl">Hablar con</span>${personaChips(E, 'e')}</div>
@@ -690,6 +716,52 @@ function renderList() {
   }
 }
 
+/* ====== Formato ====== */
+function inlineMd(s) { return esc(s).replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>'); }
+function mdLite(s) {
+  const lines = String(s || '').split('\n'); let html = '', list = null, buf = [];
+  const flush = () => { if (buf.length) { html += '<div>' + buf.join('<br>') + '</div>'; buf = []; } };
+  const close = () => { if (list) { html += '</' + list + '>'; list = null; } };
+  for (const ln of lines) {
+    const ul = ln.match(/^\s*[-•]\s+(.*)$/), ol = ln.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (ul || ol) {
+      flush(); const tg = ul ? 'ul' : 'ol';
+      if (list !== tg) { close(); html += '<' + tg + (ol && ol[1] !== '1' ? ' start="' + ol[1] + '"' : '') + '>'; list = tg; }
+      html += '<li>' + inlineMd(ul ? ul[1] : ol[2]) + '</li>';
+    } else { close(); buf.push(inlineMd(ln)); }
+  }
+  flush(); close(); return html;
+}
+function setTA(ta, val, s, e) { ta.value = val; ta.focus(); ta.setSelectionRange(s, e); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+function fmtApply(ta, kind) {
+  const v = ta.value, s = ta.selectionStart, e = ta.selectionEnd;
+  if (kind === 'bold') {
+    const sel = v.slice(s, e);
+    if (sel.length >= 4 && sel.startsWith('**') && sel.endsWith('**')) setTA(ta, v.slice(0, s) + sel.slice(2, -2) + v.slice(e), s, e - 4);
+    else if (v.slice(s - 2, s) === '**' && v.slice(e, e + 2) === '**') setTA(ta, v.slice(0, s - 2) + sel + v.slice(e + 2), s - 2, e - 2);
+    else setTA(ta, v.slice(0, s) + '**' + sel + '**' + v.slice(e), s + 2, e + 2);
+    return;
+  }
+  const ls = v.lastIndexOf('\n', s - 1) + 1; let le = v.indexOf('\n', e > s && v[e - 1] === '\n' ? e - 1 : e); if (le < 0) le = v.length;
+  const lines = v.slice(ls, le).split('\n');
+  const reU = /^\s*[-•]\s+/, reO = /^\s*\d+[.)]\s+/, re = kind === 'ul' ? reU : reO;
+  const filled = lines.filter(l => l.trim());
+  const all = filled.length > 0 && filled.every(l => re.test(l));
+  let n = 0;
+  const out = lines.map(l => { const base = l.replace(reU, '').replace(reO, ''); if (all) return base; if (!l.trim() && lines.length > 1) return l; n++; return (kind === 'ul' ? '• ' : n + '. ') + base; }).join('\n');
+  setTA(ta, v.slice(0, ls) + out + v.slice(le), ls + out.length, ls + out.length);
+}
+function listContinue(ta) {
+  const v = ta.value, s = ta.selectionStart; if (s !== ta.selectionEnd) return false;
+  const ls = v.lastIndexOf('\n', s - 1) + 1, line = v.slice(ls, s);
+  const mu = line.match(/^(\s*)([-•])\s+(.*)$/), mo = line.match(/^(\s*)(\d+)([.)])\s+(.*)$/);
+  if (!mu && !mo) return false;
+  if (!(mu ? mu[3] : mo[4]).trim()) { setTA(ta, v.slice(0, ls) + v.slice(s), ls, ls); return true; }
+  const mk = mu ? mu[1] + mu[2] + ' ' : mo[1] + (Number(mo[2]) + 1) + mo[3] + ' ';
+  setTA(ta, v.slice(0, s) + '\n' + mk + v.slice(s), s + 1 + mk.length, s + 1 + mk.length);
+  return true;
+}
+
 /* ====== Eventos ====== */
 function scopeObj(sc) { return sc === 'd' ? D : S.E; }
 function rerenderScope(sc) { if (sc === 'd') renderAdder(); else renderList(); }
@@ -702,7 +774,17 @@ function setDate(o, v) {
   else if (v === 'fecha') o._picking = true;
 }
 
+let lastTA = null;
+document.addEventListener('focusin', e => { if (e.target.tagName === 'TEXTAREA') lastTA = e.target; });
+document.addEventListener('mousedown', e => { if (e.target.closest('.fb')) e.preventDefault(); });
 document.addEventListener('click', e => {
+  const fb = e.target.closest('.fb');
+  if (fb) {
+    const box = fb.closest('.editor, .adder');
+    const ta = lastTA && box.contains(lastTA) ? lastTA : box.querySelector(box.classList.contains('editor') ? '.e-txt' : '#newText');
+    if (ta) fmtApply(ta, fb.dataset.fmt);
+    return;
+  }
   const el = e.target.closest('[data-a],[data-sheet],#btnNewSheet,[data-close]');
   if (!el) return;
   if (el.matches('[data-close]')) { el.closest('dialog').close(); return; }
@@ -755,6 +837,11 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('keydown', e => {
   const t = e.target;
+  if (t.tagName === 'TEXTAREA' && (t.id === 'newText' || t.id === 'newNote' || t.closest?.('.editor'))) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); fmtApply(t, 'bold'); return; }
+    const nl = e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.isComposing && (t.id === 'newText' ? e.shiftKey : !e.shiftKey);
+    if (nl && listContinue(t)) { e.preventDefault(); return; }
+  }
   if (t.classList?.contains('pinput')) {
     if (e.key === 'Enter') { e.preventDefault(); const o = scopeObj(t.dataset.sc); const n = savePersona(t.value); if (n) o.persona = n; o._otra = false; rerenderScope(t.dataset.sc); if (t.dataset.sc === 'd') $('#newText').focus(); }
     if (e.key === 'Escape') { const o = scopeObj(t.dataset.sc); o._otra = false; rerenderScope(t.dataset.sc); }
@@ -865,11 +952,11 @@ $('#formSend').onsubmit = async e => {
   const btn = $('#sendGo'); btn.disabled = true; btn.textContent = 'Enviando…'; $('#sendErr').textContent = '';
   try {
     await drain();
-    await api('sendReport', { hojaIds, to, cc, incluirHechas: $('#incDone').checked, comentario: $('#sendMsg').value.trim() });
+    await api('sendReport', { hojaIds, to, cc, incluirHechas: $('#incDone').checked, comentario: $('#sendMsg').value.trim() }, 180000);
     $('#dlgSend').close();
     toast(`Resumen enviado a ${to}${cc.length ? ` (+${cc.length} en copia)` : ''}`);
   } catch (err) {
-    $('#sendErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Enviar';
+    $('#sendErr').textContent = err.timeout ? 'El servidor tardó demasiado en responder. Revisá tu casilla: el mail puede haber salido igual.' : err.message; btn.disabled = false; btn.textContent = 'Enviar';
   }
 };
 
