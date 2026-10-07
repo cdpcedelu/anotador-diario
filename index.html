@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 2.1 — 2026-09-30 12:05 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 2.2 — 2026-10-01 09:00 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -21,6 +21,7 @@
   --venc:#983A33;--vencFill:#983A33;--vencT:#FBF0EE;
   --ok:#3F6B55;--gold:#A7792B;--prioBg:#FBF7EF;--prioLine:#E3D3B4;--toastLink:#9CC3E6;
   --shadow:rgba(28,38,48,.08);
+  --star:#2F6F6A;--starFill:#2F6F6A;--starT:#EAF4F2;
   --sans:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --serif:'Newsreader',Georgia,'Times New Roman',serif;
   color-scheme:light;
@@ -33,6 +34,7 @@
   --venc:#E59A90;--vencFill:#A8463D;--vencT:#2B1F1F;
   --ok:#4F8A6D;--gold:#D6AE5E;--prioBg:#2E281C;--prioLine:#5A4A2A;--toastLink:#1F4E79;
   --shadow:rgba(0,0,0,.35);
+  --star:#7CC4BA;--starFill:#3A8A82;--starT:#16282A;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -172,6 +174,14 @@ main{padding:30px 40px 90px;max-width:940px;width:100%}
 .task:hover{background:var(--soft)}
 .task.is-hoy{background:var(--hoyT);border-left-color:var(--hoyFill)}
 .task.is-venc{background:var(--vencT);border-left-color:var(--vencFill)}
+.task.is-star{background:var(--starT);border-left-color:var(--starFill)}
+.task.is-star .who{background:var(--starFill);color:#fff}
+.task.drop-before{box-shadow:inset 0 3px 0 var(--hoyFill)}
+.task.drop-after{box-shadow:inset 0 -3px 0 var(--hoyFill)}
+.task.dragging{opacity:.4}
+.grip{width:14px;flex:none;align-self:stretch;display:grid;place-items:center;color:var(--ink3);cursor:grab;opacity:0;margin:0 -8px 0 -6px;user-select:none}
+.task:hover .grip{opacity:.7}
+@media (hover:none){.grip{display:none}}
 .check{width:20px;height:20px;flex:none;margin-top:2px;border:1.6px solid var(--checkLine);border-radius:5px;background:var(--surface);display:grid;place-items:center;padding:0;color:#fff}
 .check:hover{border-color:var(--ink)}
 .is-done .check{background:var(--ok);border-color:var(--ok)}
@@ -392,6 +402,7 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
     <div class="fld"><label for="setKey">Clave de acceso</label><input type="password" id="setKey" autocomplete="off" placeholder="an-…"></div>
     <div class="fld"><label for="setTo">Enviar el resumen a</label><input type="email" id="setTo"></div>
     <div class="fld"><label for="setPer">Personas (una por línea)</label><textarea id="setPer" rows="4"></textarea></div>
+    <div class="fld"><label for="setStar">Temas que van primero y en otro color</label><select id="setStar"></select></div>
     <div class="fld"><span class="fl">Envío automático</span>
       <label class="switch"><input type="checkbox" id="setAuto"> Enviar todas las hojas de lunes a viernes a las
         <select id="setHora" style="width:auto;padding:4px 8px"></select></label>
@@ -436,7 +447,7 @@ details.adv summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--in
 /* ====== Configuración ====== */
 const API_DEFAULT = 'https://script.google.com/macros/s/AKfycbzxoBr6IfFWPz8KUlybtn65YmjhXIkq1Wy8sZ7xozqPMGlmox2TtEADZcdhAkCWlIXF/exec';   // URL /exec de la aplicación web de Apps Script
 const PALETTE = ['#3E5C76', '#5B7F6B', '#8A6D3B', '#7A5C74', '#4F7A8A', '#9B5B4B', '#5E6570'];
-const PCOL = { Ezzy: '#3E5C76', Maia: '#5B7F6B', Maca: '#7A5C74', Lucia: '#8A6D3B' };
+const PCOL = { Ezzy: '#2F6F6A', Maia: '#5B7F6B', Maca: '#7A5C74', Lucia: '#8A6D3B' };
 const GRUPOS = [['venc', 'Vencidas'], ['hoy', 'Hoy'], ['man', 'Mañana'], ['semana', 'Esta semana'], ['prox', 'Semana entrante'], ['mas', 'Más adelante'], ['sin', 'Sin fecha']];
 const I = {
   check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
@@ -446,6 +457,8 @@ const I = {
   chat: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>',
   ul: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg>',
   ol: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M4 4.5 5 4v4M4 8h2M4 11.5a1 1 0 0 1 2 .3c0 .8-2 1.7-2 2.2h2M4 17h1.5a.75.75 0 0 1 0 1.5H4.5 5.5a.75.75 0 0 1 0 1.5H4" stroke-width="1.4"/></svg>',
+  up: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>',
+  down: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   today: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
 };
 
@@ -485,7 +498,7 @@ const cache = LS.get('cache', null);
 const S = {
   hojas: cache?.hojas || [{ id: 'h_general', nombre: 'General', color: PALETTE[0], orden: 1 }],
   tareas: cache?.tareas || [],
-  config: Object.assign({ destinatario: 'amelife@amelife-911.com', ccSugeridos: 'ezzy@ame-life.net', personas: 'Ezzy,Maia,Maca,Lucia', autoEnvio: 'no', horaAutoEnvio: '19' }, cache?.config || {}),
+  config: Object.assign({ destinatario: 'amelife@amelife-911.com', ccSugeridos: 'ezzy@ame-life.net', personas: 'Ezzy,Maia,Maca,Lucia', autoEnvio: 'no', horaAutoEnvio: '19', destacar: 'Ezzy' }, cache?.config || {}),
   hoja: LS.get('hoja', '__hoy'),
   filtro: LS.get('filtro', 'pendientes'),
   persona: '', q: '', E: null, showDone: false
@@ -632,7 +645,9 @@ function visible() {
   if (S.q) { const q = S.q.toLowerCase(); t = t.filter(x => (x.texto + ' ' + x.nota + ' ' + x.persona).toLowerCase().includes(q)); }
   return t;
 }
-const sortFn = (a, b) => (a.prioridad !== b.prioridad) ? (a.prioridad ? -1 : 1) : ((a.fecha || '9') !== (b.fecha || '9') ? ((a.fecha || '9') < (b.fecha || '9') ? -1 : 1) : String(a.creada).localeCompare(String(b.creada)));
+const isStar = t => !!S.config.destacar && String(t.persona || '').toLowerCase() === String(S.config.destacar).toLowerCase();
+const ordN = t => Number(t.orden) || Infinity;
+const sortFn = (a, b) => (isStar(b) - isStar(a)) || (ordN(a) - ordN(b)) || (a.prioridad !== b.prioridad ? (a.prioridad ? -1 : 1) : 0) || ((a.fecha || '9') !== (b.fecha || '9') ? ((a.fecha || '9') < (b.fecha || '9') ? -1 : 1) : String(a.creada).localeCompare(String(b.creada)));
 
 function render() { renderTop(); renderSide(); renderHead(); renderAdder(); renderTools(); renderList(); }
 
@@ -715,16 +730,17 @@ function tagHTML(t) {
 function itemHTML(t) {
   if (S.E && S.E.id === t.id) return editorHTML();
   const b = bucket(t.fecha);
-  const cls = ['task', t.prioridad && 'prio', t.hecha ? 'is-done' : b === 'hoy' ? 'is-hoy' : b === 'venc' ? 'is-venc' : ''].filter(Boolean).join(' ');
+  const cls = ['task', t.prioridad && 'prio', t.hecha ? 'is-done' : b === 'hoy' ? 'is-hoy' : b === 'venc' ? 'is-venc' : '', !t.hecha && isStar(t) && 'is-star'].filter(Boolean).join(' ');
   const hoja = S.hoja === '__hoy' ? hojaById(t.hojaId) : null;
   return `<div class="${cls}" data-id="${esc(t.id)}">
-    <button class="check" data-a="done" aria-label="${t.hecha ? 'Marcar como pendiente' : 'Marcar como terminada'}">${t.hecha ? I.check : ''}</button>
+    ${t.hecha ? '' : '<span class="grip" title="Arrastrá para ordenar" aria-hidden="true">⋮⋮</span>'}<button class="check" data-a="done" aria-label="${t.hecha ? 'Marcar como pendiente' : 'Marcar como terminada'}">${t.hecha ? I.check : ''}</button>
     <div class="tb" data-a="edit" title="Editar">
       <div class="txt">${mdLite(t.texto)}</div>
       <div class="meta">${tagHTML(t)}${t.prioridad && !t.hecha ? '<span class="tag prio">Prioridad</span>' : ''}${t.persona ? `<span class="who" style="--pc:${pcol(t.persona)}" title="Hablar con ${esc(t.persona)}">${I.chat}${esc(t.persona)}</span>` : ''}${hoja ? `<span class="tag sh" style="--c:${esc(hoja.color)}">${esc(hoja.nombre)}</span>` : ''}</div>
       ${t.nota ? `<div class="note">${mdLite(t.nota)}</div>` : ''}
     </div>
     <div class="acts">
+      ${t.hecha ? '' : `<button class="ib" data-a="up" title="Subir" aria-label="Subir">${I.up}</button><button class="ib" data-a="down" title="Bajar" aria-label="Bajar">${I.down}</button>`}
       <button class="ib star ${t.prioridad ? 'on' : ''}" data-a="prio" title="Prioridad" aria-label="Prioridad">${t.prioridad ? I.star : I.starO}</button>
       <button class="ib" data-a="del" title="Eliminar" aria-label="Eliminar">${I.trash}</button>
     </div>
@@ -872,6 +888,8 @@ document.addEventListener('click', e => {
     case 'per-otra': { const o = scopeObj(sc); o._otra = true; rerenderScope(sc); setTimeout(() => document.querySelector(`.pinput[data-sc="${sc}"]`)?.focus(), 0); break; }
     case 'done': toggleDone(id); break;
     case 'prio': togglePrio(id); break;
+    case 'up': moveTaskBy(id, -1); break;
+    case 'down': moveTaskBy(id, 1); break;
     case 'del': deleteTask(id); break;
     case 'edit': { const t = S.tareas.find(x => x.id === id); if (t) { S.E = Object.assign({}, t, { _otra: false, _picking: false }); renderList(); } break; }
     case 'e-prio': S.E.prioridad = !S.E.prioridad; renderList(); break;
@@ -942,6 +960,60 @@ $('#btnEditSheet').onclick = () => openSheetDlg(hojaById(S.hoja));
 $('#btnSend').onclick = openSend;
 $('#btnIA').onclick = openIA;
 $('#btnSet').onclick = () => openSettings();
+
+/* ====== Orden manual de tareas ====== */
+const gkey = t => t.hecha ? 'done' : bucket(t.fecha);
+function inView(x) {
+  if (S.hoja !== '__hoy') return x.hojaId === S.hoja;
+  return x.hecha ? String(x.completada).slice(0, 10) === hoyStr() : ['hoy', 'venc'].includes(bucket(x.fecha));
+}
+function groupList(t) { const k = gkey(t); return S.tareas.filter(x => !x.hecha && inView(x) && gkey(x) === k).sort(sortFn); }
+function reorderTask(id, targetId, after) {
+  const t = S.tareas.find(x => x.id === id); if (!t || t.hecha || id === targetId) return;
+  const list = groupList(t); const from = list.indexOf(t); if (from < 0) return;
+  list.splice(from, 1);
+  let to = list.findIndex(x => x.id === targetId); if (to < 0) return;
+  if (after) to++;
+  list.splice(to, 0, t);
+  const fin = [...list.filter(isStar), ...list.filter(x => !isStar(x))];
+  const changed = [];
+  fin.forEach((x, i) => { if (Number(x.orden) !== i + 1) { x.orden = i + 1; changed.push(x); } });
+  if (changed.length) enqueue('upsertTasks', { tareas: changed });
+  renderList();
+  if (fin.indexOf(t) !== list.indexOf(t)) toast(`Los temas con ${S.config.destacar} siempre quedan primero`);
+}
+function moveTaskBy(id, dir) {
+  const t = S.tareas.find(x => x.id === id); if (!t) return;
+  const list = groupList(t); const i = list.indexOf(t), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  reorderTask(id, list[j].id, dir > 0);
+}
+let dragTask = null;
+$('#list').addEventListener('mousedown', e => { const g = e.target.closest('.grip'); if (g) g.closest('.task').draggable = true; });
+$('#list').addEventListener('dragstart', e => {
+  const row = e.target.closest('.task[data-id]'); if (!row || !row.draggable) return;
+  dragTask = row.dataset.id; row.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragTask);
+});
+$('#list').addEventListener('dragover', e => {
+  if (!dragTask) return;
+  const row = e.target.closest('.task[data-id]'); if (!row || row.classList.contains('is-done')) return;
+  const a = S.tareas.find(x => x.id === dragTask), b = S.tareas.find(x => x.id === row.dataset.id);
+  if (!a || !b || gkey(a) !== gkey(b)) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  const r = row.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+  document.querySelectorAll('#list .task').forEach(x => { if (x !== row) x.classList.remove('drop-before', 'drop-after'); });
+  row.classList.toggle('drop-before', !after); row.classList.toggle('drop-after', after);
+});
+$('#list').addEventListener('drop', e => {
+  if (!dragTask) return;
+  const row = e.target.closest('.task[data-id]');
+  if (row && (row.classList.contains('drop-before') || row.classList.contains('drop-after'))) { e.preventDefault(); reorderTask(dragTask, row.dataset.id, row.classList.contains('drop-after')); }
+});
+$('#list').addEventListener('dragend', () => {
+  dragTask = null;
+  document.querySelectorAll('#list .task').forEach(x => { x.draggable = false; x.classList.remove('drop-before', 'drop-after', 'dragging'); });
+});
 
 /* ====== Hojas ====== */
 function sortedHojas() { return S.hojas.slice().sort((a, b) => a.orden - b.orden); }
@@ -1101,6 +1173,7 @@ function openSettings(msg) {
   $('#setIAApi').value = iaUrl(); $('#setIAKey').value = iaKey();
   $('#setTo').value = S.config.destinatario || '';
   $('#setPer').value = personas().join('\n');
+  $('#setStar').innerHTML = '<option value="">Ninguno</option>' + personas().map(p => `<option ${p.toLowerCase() === String(S.config.destacar || '').toLowerCase() ? 'selected' : ''}>${esc(p)}</option>`).join('');
   $('#setAuto').checked = S.config.autoEnvio === 'si';
   $('#setHora').innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${String(h) === String(S.config.horaAutoEnvio) ? 'selected' : ''}>${pad(h)}:00</option>`).join('');
   $('#setErr').textContent = msg || '';
@@ -1117,7 +1190,7 @@ $('#formSet').onsubmit = e => {
   const connChanged = key !== apiKey() || url !== apiUrl();
   LS.set('key', key); LS.set('api', url && url !== API_DEFAULT ? url : '');
   const per = $('#setPer').value.split('\n').map(s => s.trim().replace(/,/g, ' ')).filter(Boolean);
-  const cfg = { destinatario: to || S.config.destinatario, personas: per.join(','), autoEnvio: $('#setAuto').checked ? 'si' : 'no', horaAutoEnvio: $('#setHora').value };
+  const cfg = { destinatario: to || S.config.destinatario, personas: per.join(','), autoEnvio: $('#setAuto').checked ? 'si' : 'no', horaAutoEnvio: $('#setHora').value, destacar: $('#setStar').value };
   const changed = Object.keys(cfg).some(k => String(cfg[k]) !== String(S.config[k]));
   Object.assign(S.config, cfg);
   if (changed) enqueue('saveConfig', cfg);
