@@ -1,6 +1,6 @@
 /**
  * Anotador diario — Backend (Google Apps Script vinculado a la planilla)
- * Versión 1.3 — 2026-09-30 10:00 ARG
+ * Versión 1.4 — 2026-10-01 09:00 ARG
  * Autor: Germán Rodríguez
  *
  * Instalación (una sola vez):
@@ -13,7 +13,7 @@
 
 const TZ = 'America/Argentina/Buenos_Aires';
 const SH = { T: 'Tareas', H: 'Hojas', C: 'Config', E: 'Envios' };
-const COLS_T = ['id', 'hojaId', 'texto', 'hecha', 'fecha', 'persona', 'nota', 'prioridad', 'creada', 'completada'];
+const COLS_T = ['id', 'hojaId', 'texto', 'hecha', 'fecha', 'persona', 'nota', 'prioridad', 'creada', 'completada', 'orden'];
 const COLS_H = ['id', 'nombre', 'color', 'orden'];
 const COLS_E = ['fecha', 'para', 'cc', 'hojas', 'pendientes', 'origen'];
 const CONFIG_DEFAULTS = {
@@ -21,7 +21,8 @@ const CONFIG_DEFAULTS = {
   ccSugeridos: 'ezzy@ame-life.net',
   personas: 'Ezzy,Maia,Maca,Lucia',
   autoEnvio: 'no',
-  horaAutoEnvio: '19'
+  horaAutoEnvio: '19',
+  destacar: 'Ezzy'
 };
 const GRUPOS = [
   ['venc', 'Vencidas'], ['hoy', 'Hoy'], ['man', 'Mañana'], ['semana', 'Esta semana'],
@@ -115,7 +116,7 @@ function doPost(e) {
 }
 
 const ACTIONS = {
-  bootstrap: () => ({ hojas: getHojas_(), tareas: getTareas_(), config: getConfig_(), hoy: today_(), batch: true, version: '1.3' }),
+  bootstrap: () => { fixHeaders_(); return { hojas: getHojas_(), tareas: getTareas_(), config: getConfig_(), hoy: today_(), batch: true, version: '1.4' }; },
   batch: p => (p.ops || []).slice(0, 50).map(op => {
     if (['batch', 'bootstrap', 'sendReport'].indexOf(op.action) >= 0 || !ACTIONS[op.action]) throw new Error('Acción no permitida en lote: ' + op.action);
     return ACTIONS[op.action](op.payload || {});
@@ -214,8 +215,16 @@ function deleteMany_(name, idList) {
 
 function isTrue_(v) { return v === true || String(v).toLowerCase() === 'true'; }
 
+function fixHeaders_() {
+  const sh = sheet_(SH.T);
+  const h = sh.getRange(1, 1, 1, COLS_T.length).getValues()[0];
+  if (String(h[COLS_T.length - 1]) !== COLS_T[COLS_T.length - 1]) {
+    sh.getRange(1, 1, 1, COLS_T.length).setValues([COLS_T]).setFontWeight('bold').setBackground('#F5F7F9').setFontColor('#1C2630');
+  }
+}
+
 function getTareas_() {
-  return readTable_(SH.T, COLS_T).map(t => Object.assign(t, { hecha: isTrue_(t.hecha), prioridad: isTrue_(t.prioridad) }));
+  return readTable_(SH.T, COLS_T).map(t => Object.assign(t, { hecha: isTrue_(t.hecha), prioridad: isTrue_(t.prioridad), orden: Number(t.orden) || '' }));
 }
 
 function getHojas_() {
@@ -237,7 +246,8 @@ function cleanTask_(p) {
     nota: String(p.nota || '').slice(0, 4000),
     prioridad: !!p.prioridad,
     creada: String(p.creada || nowIso_()),
-    completada: p.hecha ? String(p.completada || nowIso_()) : ''
+    completada: p.hecha ? String(p.completada || nowIso_()) : '',
+    orden: Number(p.orden) > 0 ? Math.round(Number(p.orden)) : ''
   };
 }
 
@@ -368,7 +378,14 @@ function escBr_(s) {
 
 function isEmail_(s) { return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(s).trim()); }
 
+let DESTACAR_ = '';
+function esDestacada_(t) { return !!DESTACAR_ && String(t.persona || '').toLowerCase() === DESTACAR_.toLowerCase(); }
+
 function ordenar_(a, b) {
+  const sa = esDestacada_(a), sb = esDestacada_(b);
+  if (sa !== sb) return sa ? -1 : 1;
+  const oa = Number(a.orden) || Infinity, ob = Number(b.orden) || Infinity;
+  if (oa !== ob) return oa < ob ? -1 : 1;
   if (a.prioridad !== b.prioridad) return a.prioridad ? -1 : 1;
   if ((a.fecha || '') !== (b.fecha || '')) return (a.fecha || '9') < (b.fecha || '9') ? -1 : 1;
   return String(a.creada) < String(b.creada) ? -1 : 1;
@@ -388,10 +405,10 @@ function pdfHtml_(hoja, r, hoy) {
   const fila = (t, cls) => '<tr class="' + cls + '"><td>' +
     (t.prioridad ? '<b>' + escBr_(t.texto) + '</b> <span class="prio">Prioridad</span>' : escBr_(t.texto)) +
     (t.nota ? '<div class="nota">' + esc_(t.nota).replace(/\n/g, '<br>') + '</div>' : '') +
-    '</td><td class="c">' + (cls === 'hoy' ? '<span class="pill">HOY</span>' : esc_(cuando_(t, hoy))) +
+    '</td><td class="c">' + (/\bhoy\b/.test(cls) ? '<span class="pill">HOY</span>' : esc_(cuando_(t, hoy))) +
     '</td><td class="c">' + esc_(t.persona) + '</td></tr>';
   const tabla = (items, cls) => '<table class="t"><tr><th>Tarea</th><th style="width:22%">Cuándo</th><th style="width:18%">Hablar con</th></tr>' +
-    items.map(t => fila(t, typeof cls === 'function' ? cls(t) : cls)).join('') + '</table>';
+    items.map(t => fila(t, ((typeof cls === 'function' ? cls(t) : cls) + (esDestacada_(t) ? ' star' : '')).trim())).join('') + '</table>';
 
   let html = '<html><head><meta charset="utf-8"><style>' +
     'body{font-family:Arial,Helvetica,sans-serif;color:#1C2630;font-size:10.5pt;margin:0}' +
@@ -404,7 +421,7 @@ function pdfHtml_(hoja, r, hoy) {
     '.t{width:100%;border-collapse:collapse}' +
     '.t th{text-align:left;font-size:8.5pt;color:#8B959E;padding:4px 6px;border-bottom:1px solid #E3E7EB}' +
     '.t td{padding:6px;border-bottom:1px solid #EEF1F4;vertical-align:top}.t td.c{font-size:9.5pt;color:#56626D}' +
-    'tr.hoy td{background:#EEF4FA}tr.venc td{background:#FBF0EE}tr.done td{color:#8B959E}' +
+    'tr.hoy td{background:#EEF4FA}tr.venc td{background:#FBF0EE}tr.star td{background:#EAF4F2}tr.done td{color:#8B959E}' +
     '.pill{background:#1F4E79;color:#fff;font-weight:bold;font-size:8pt;padding:1px 6px}' +
     '.prio{color:#8A6D3B;font-size:8pt;font-weight:bold}' +
     '.nota{color:#56626D;font-size:9pt;margin-top:2px}' +
@@ -475,6 +492,7 @@ function sendReport_(p) {
   const tareas = getTareas_();
   const hoy = today_();
   const incluir = p.incluirHechas !== false;
+  DESTACAR_ = String(getConfig_().destacar || '');
   const resumen = [];
   const attachments = sel.map(h => {
     const r = reportData_(tareas.filter(t => t.hojaId === h.id), hoy, incluir);
