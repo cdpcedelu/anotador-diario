@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Anotador diario — Frontend — Versión 2.2 — 2026-10-01 09:00 ARG — Germán Rodríguez -->
+<!-- Anotador diario — Frontend — Versión 2.3 — 2026-10-26 10:00 ARG — Germán Rodríguez -->
 <html lang="es-AR">
 <head>
 <meta charset="utf-8">
@@ -207,6 +207,7 @@ main{padding:30px 40px 90px;max-width:940px;width:100%}
 .tag.hoy{background:var(--hoyFill);color:#fff;letter-spacing:.05em}
 .tag.venc{background:var(--vencFill);color:#fff}
 .tag.prio{background:var(--prioBg);color:var(--gold)}
+.tag.draft{background:var(--prioBg);color:var(--gold);border:1px dashed var(--prioLine)}
 .tag.sh{background:none;color:var(--ink3);font-weight:600;padding:0;display:inline-flex;gap:5px;align-items:center}
 .tag.sh::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
 .who{--pc:#5E6570;font-size:12px;font-weight:700;color:var(--pc);background:color-mix(in srgb,var(--pc) 11%,var(--surface));padding:1px 9px 1px 7px;border-radius:999px;display:inline-flex;gap:4px;align-items:center}
@@ -593,6 +594,7 @@ function addTask() {
   S.tareas.push(t); enqueue('upsertTask', t);
   inp.value = ''; Object.assign(D, { fecha: S.hoja === '__hoy' ? hoyStr() : '', persona: '', prioridad: false, nota: '', notaOpen: false, _otra: false, _picking: false });
   $('#newNote').value = '';
+  LS.set('draftNew', null);
   inp.style.height = '';
   render(); inp.focus();
   if (!visible().some(x => x.id === t.id)) toast('Tarea agregada en ' + (hojaById(hojaId)?.nombre || 'la hoja'));
@@ -607,6 +609,7 @@ function toggleDone(id) {
 function deleteTask(id) {
   const i = S.tareas.findIndex(x => x.id === id); if (i < 0) return;
   const [t] = S.tareas.splice(i, 1);
+  delDraft(id);
   if (S.E && S.E.id === id) S.E = null;
   enqueue('deleteTask', { id }); render();
   toast('Tarea eliminada', () => { S.tareas.splice(i, 0, t); saveTask(t); });
@@ -707,6 +710,7 @@ function renderAdder() {
   sel.innerHTML = S.hojas.map(h => `<option value="${esc(h.id)}">${esc(h.nombre)}</option>`).join('');
   if (prev && hojaById(prev)) sel.value = prev;
   if (D._otra) setTimeout(() => $('#pChips .pinput')?.focus(), 0);
+  saveNewDraft();
 }
 function renderTools() {
   document.querySelectorAll('#seg button').forEach(b => b.classList.toggle('on', b.dataset.f === S.filtro));
@@ -736,7 +740,7 @@ function itemHTML(t) {
     ${t.hecha ? '' : '<span class="grip" title="Arrastrá para ordenar" aria-hidden="true">⋮⋮</span>'}<button class="check" data-a="done" aria-label="${t.hecha ? 'Marcar como pendiente' : 'Marcar como terminada'}">${t.hecha ? I.check : ''}</button>
     <div class="tb" data-a="edit" title="Editar">
       <div class="txt">${mdLite(t.texto)}</div>
-      <div class="meta">${tagHTML(t)}${t.prioridad && !t.hecha ? '<span class="tag prio">Prioridad</span>' : ''}${t.persona ? `<span class="who" style="--pc:${pcol(t.persona)}" title="Hablar con ${esc(t.persona)}">${I.chat}${esc(t.persona)}</span>` : ''}${hoja ? `<span class="tag sh" style="--c:${esc(hoja.color)}">${esc(hoja.nombre)}</span>` : ''}</div>
+      <div class="meta">${getDrafts()[t.id] ? '<span class="tag draft">Borrador sin guardar</span>' : ''}${tagHTML(t)}${t.prioridad && !t.hecha ? '<span class="tag prio">Prioridad</span>' : ''}${t.persona ? `<span class="who" style="--pc:${pcol(t.persona)}" title="Hablar con ${esc(t.persona)}">${I.chat}${esc(t.persona)}</span>` : ''}${hoja ? `<span class="tag sh" style="--c:${esc(hoja.color)}">${esc(hoja.nombre)}</span>` : ''}</div>
       ${t.nota ? `<div class="note">${mdLite(t.nota)}</div>` : ''}
     </div>
     <div class="acts">
@@ -790,6 +794,7 @@ function renderList() {
   }
   $('#list').innerHTML = empty + groups + extra;
   if (S.E) {
+    saveDraft();
     const ta = $('#list .editor .e-txt'), ae = document.activeElement?.tagName;
     if (ta && ae !== 'TEXTAREA' && ae !== 'INPUT' && ae !== 'SELECT') { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
@@ -877,7 +882,7 @@ document.addEventListener('click', e => {
   if (el.matches('[data-close]')) { el.closest('dialog').close(); return; }
   if (el.id === 'btnNewSheet') { openSheetDlg(null); return; }
   if (el.dataset.sheet) {
-    S.hoja = el.dataset.sheet; LS.set('hoja', S.hoja); S.E = null; S.showDone = false;
+    if (S.E && getDrafts()[S.E.id]) toast('Tu edición quedó guardada como borrador'); S.hoja = el.dataset.sheet; LS.set('hoja', S.hoja); S.E = null; S.showDone = false;
     if (S.hoja === '__hoy' && !D.fecha) D.fecha = hoyStr();
     render(); return;
   }
@@ -891,10 +896,16 @@ document.addEventListener('click', e => {
     case 'up': moveTaskBy(id, -1); break;
     case 'down': moveTaskBy(id, 1); break;
     case 'del': deleteTask(id); break;
-    case 'edit': { const t = S.tareas.find(x => x.id === id); if (t) { S.E = Object.assign({}, t, { _otra: false, _picking: false }); renderList(); } break; }
+    case 'edit': {
+      const t = S.tareas.find(x => x.id === id); if (!t) break;
+      const dr = getDrafts()[id];
+      S.E = Object.assign({}, t, dr ? draftFields(dr) : {}, { _otra: false, _picking: false }); renderList();
+      if (dr) toast('Recuperé lo que habías escrito sin guardar', () => { delDraft(id); S.E = Object.assign({}, t, { _otra: false, _picking: false }); renderList(); }, 'Descartar borrador', 9000);
+      break;
+    }
     case 'e-prio': S.E.prioridad = !S.E.prioridad; renderList(); break;
     case 'e-done': S.E.hecha = !S.E.hecha; renderList(); break;
-    case 'e-cancel': S.E = null; renderList(); break;
+    case 'e-cancel': delDraft(S.E.id); S.E = null; renderList(); break;
     case 'e-del': deleteTask(S.E.id); break;
     case 'e-save': saveEditor(); break;
     case 'overdue': moveOverdueToToday(); break;
@@ -910,19 +921,21 @@ function saveEditor() {
   Object.assign(t, { texto, fecha: E.fecha, persona: E.persona, nota: (E.nota || '').trim(), hojaId: E.hojaId, prioridad: E.prioridad, hecha: E.hecha });
   if (t.hecha && !wasDone) t.completada = nowIso();
   if (!t.hecha) t.completada = '';
-  S.E = null; saveTask(t);
+  delDraft(E.id); S.E = null; saveTask(t);
 }
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.f && S.E) S.E[t.dataset.f] = t.value;
   if (t.id === 'newNote') D.nota = t.value;
+  if (S.E && t.closest?.('.editor')) saveDraft();
+  if (t.id === 'newText' || t.id === 'newNote') saveNewDraft();
   if (t.tagName === 'TEXTAREA' && (t.id === 'newText' || t.dataset.f)) autoGrow(t);
 });
 function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.classList.contains('dpick')) { const o = scopeObj(t.dataset.sc); if (t.value) { o.fecha = t.value; o._picking = false; rerenderScope(t.dataset.sc); } }
-  if (t.dataset.f === 'hojaId' && S.E) S.E.hojaId = t.value;
+  if (t.dataset.f === 'hojaId' && S.E) { S.E.hojaId = t.value; saveDraft(); }
 });
 document.addEventListener('keydown', e => {
   const t = e.target;
@@ -960,6 +973,23 @@ $('#btnEditSheet').onclick = () => openSheetDlg(hojaById(S.hoja));
 $('#btnSend').onclick = openSend;
 $('#btnIA').onclick = openIA;
 $('#btnSet').onclick = () => openSettings();
+
+/* ====== Borradores ====== */
+const DF = ['texto', 'nota', 'fecha', 'persona', 'hojaId', 'prioridad', 'hecha'];
+function getDrafts() { return LS.get('drafts', {}) || {}; }
+function draftFields(d) { const o = {}; DF.forEach(k => { if (k in d) o[k] = d[k]; }); return o; }
+function saveDraft() {
+  const E = S.E; if (!E) return;
+  const t = S.tareas.find(x => x.id === E.id); const d = getDrafts();
+  const changed = !t || DF.some(k => String(E[k] ?? '') !== String(t[k] ?? ''));
+  if (changed) d[E.id] = Object.assign(draftFields(E), { ts: Date.now() }); else delete d[E.id];
+  LS.set('drafts', d);
+}
+function delDraft(id) { const d = getDrafts(); if (d[id]) { delete d[id]; LS.set('drafts', d); } }
+function saveNewDraft() {
+  const v = $('#newText').value, n = $('#newNote').value;
+  LS.set('draftNew', v.trim() || n.trim() ? { texto: v, nota: n, fecha: D.fecha, persona: D.persona, prioridad: D.prioridad } : null);
+}
 
 /* ====== Orden manual de tareas ====== */
 const gkey = t => t.hecha ? 'done' : bucket(t.fecha);
@@ -1387,7 +1417,14 @@ window.addEventListener('offline', () => setSync('offline'));
 window.addEventListener('focus', () => { if (!Q.length && !S.E && !document.querySelector('dialog[open]') && Date.now() - lastLoad > 60000) load(); else renderTop(); });
 setInterval(() => { renderTop(); if (!S.E) { renderSide(); renderHead(); } }, 60000);
 if (S.hoja !== '__hoy' && !hojaById(S.hoja)) S.hoja = '__hoy';
+const dn = LS.get('draftNew', null);
+if (dn) {
+  $('#newText').value = dn.texto || ''; $('#newNote').value = dn.nota || '';
+  Object.assign(D, { fecha: dn.fecha || '', persona: dn.persona || '', prioridad: !!dn.prioridad, nota: dn.nota || '', notaOpen: !!String(dn.nota || '').trim() });
+  adderOpen(true);
+}
 render();
+if (dn) toast('Recuperé la tarea que estabas escribiendo');
 if (!apiUrl() || !apiKey()) { setSync('off'); openSettings(apiUrl() ? 'Ingresá la clave de acceso para conectar con tu planilla.' : 'Ingresá la URL de la aplicación web y la clave de acceso.'); }
 else load();
 </script>
